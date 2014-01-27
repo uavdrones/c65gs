@@ -95,11 +95,17 @@ architecture Behavioural of simple6502 is
   signal ram_bank_registers_write : bank_register_set;
   signal ram_bank_registers_instructions : bank_register_set;
 
+  type zp_cache is array (0 to 127) of unsigned(7 downto 0);
+  signal zp_cache_evens : zp_cache := (others => (others => '0'));
+  signal zp_cache_odds : zp_cache := (others => (others => '0'));
+  
   -- For debugging, keep a log of the processor states for the last instruction.
   -- It's a bit of a kluge to use this type of array, but it is convenient.
   signal recent_states : bank_register_set;
   
   signal fastram_byte_number : unsigned(2 DOWNTO 0);
+  -- Cache most recent fastram read address
+  signal fastram_fetch_address : unsigned(16 downto 0) := (others => '1');
   
 -- CPU internal state
   signal flag_c : std_logic;        -- carry flag
@@ -383,6 +389,7 @@ begin
       accessing_ram <= '1';
       fastram_address <= std_logic_vector(long_address(16 downto 3));
       fastram_byte_number <= long_address(2 downto 0);
+      fastram_fetch_address <= long_address(16 downto 3);
       fastram_read <= '1';
       pending_state <= next_state;
       state <= WaitOneCycle;
@@ -445,6 +452,18 @@ begin
     end if;
   end read_address;
 
+  -- purpose: read a ZP address (using ZP cache to do it this cycle)
+  function read_zp (
+    address : unsigned(7 downto 0))
+    return unsigned is
+  begin  -- read_zp
+    if address(0)='0' then
+      return zp_cache_evens(to_integer(address(7 downto 1)));
+    else      
+      return zp_cache_odds(to_integer(address(7 downto 1)));
+    end if;
+  end read_zp;
+  
   procedure write_long_byte(
     long_address       : in unsigned(27 downto 0);
     value              : in unsigned(7 downto 0);
@@ -591,6 +610,24 @@ begin
           map_c64mode_rom(14); map_c64mode_rom(15);          
       end case;
       state <= next_state;
+    elsif address(15 downto 8) = x"00" then
+      -- Zero page.
+      -- Write normally, as well as to zero page cache.
+      long_address := resolve_address_to_long(address,memmap);
+      --report "Writing $" & to_hstring(value) & " @ $" & to_hstring(address)
+      --  & " (resolves to $" & to_hstring(long_address) & ")" severity note;
+      write_long_byte(long_address,value,next_state);
+
+      -- We have odd and even ZP caches, so that we can assemble any ZP
+      -- indirect operand in a single cycle.
+      -- XXX We assume ZP cache is always valid, so ZP has the same contents
+      -- regardless of where it is banked to.  Writing to ZP will however
+      -- modify the underlying memory.
+      if address(0) = '0' then
+        zp_cache_evens(to_integer(address(7 downto 1))) <= value;
+      else
+        zp_cache_odds(to_integer(address(7 downto 1))) <= value;
+      end if;
     else
       long_address := resolve_address_to_long(address,memmap);
       --report "Writing $" & to_hstring(value) & " @ $" & to_hstring(address)
