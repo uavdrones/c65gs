@@ -259,8 +259,10 @@ architecture Behavioural of simple6502 is
 
   -- PC used for JSR is the value of reg_pc after reading only one of
   -- of the argument bytes.  We could subtract one, but it is less logic to
-  -- just remember PC after reading one argument byte.
-  signal reg_pc_jsr : unsigned(15 downto 0);
+  -- just remember PC after reading one argument byte.  We now just remember
+  -- the PC of the instruction, as it also deals with some other problems when
+  -- we read opcode plus arguments in the same cycle.
+  signal reg_pc_instruction : unsigned(15 downto 0);
   -- Temporary address register (used for indirect modes)
   signal reg_addr : unsigned(15 downto 0);
   -- Temporary instruction register (used for many modes)
@@ -334,8 +336,9 @@ begin
     ram_bank_registers_write(12) <= x"FFEC";
     ram_bank_registers_instructions(12) <= x"FFEC";
     
-    -- For simulation: our own rom at $E000 - $FFFF, also mapping to $0000-$0FFF
-    -- since fastram doesn't work in simulation with GHDL.
+    -- For simulation: our own rom at $E000 - $FFFF
+    -- (RAM can stay fastram as we have emulated fastram for GHDL, the
+    -- only tradeoff being that the VIC-IV can't read it).
     --ram_bank_registers_read(14) <= x"FFFE";
     --ram_bank_registers_write(14) <= x"000E";
     --ram_bank_registers_instructions(14) <= x"FFFE";
@@ -707,6 +710,35 @@ begin
     end if;
   end read_data; 
 
+  impure function fastram_byte_plus1
+    return unsigned is
+  begin
+    case fastram_byte_number is
+      when "000" => return unsigned(fastram_dataout(15 downto 8));
+      when "001" => return unsigned(fastram_dataout(23 downto 16));
+      when "010" => return unsigned(fastram_dataout(31 downto 24));
+      when "011" => return unsigned(fastram_dataout(39 downto 32));
+      when "100" => return unsigned(fastram_dataout(47 downto 40));
+      when "101" => return unsigned(fastram_dataout(55 downto 48));
+      when "110" => return unsigned(fastram_dataout(63 downto 56));
+      when others => return x"FF";
+    end case;
+  end fastram_byte_plus1; 
+
+  impure function fastram_byte_plus2
+    return unsigned is
+  begin
+    case fastram_byte_number is
+      when "000" => return unsigned(fastram_dataout(23 downto 16));
+      when "001" => return unsigned(fastram_dataout(31 downto 24));
+      when "010" => return unsigned(fastram_dataout(39 downto 32));
+      when "011" => return unsigned(fastram_dataout(47 downto 40));
+      when "100" => return unsigned(fastram_dataout(55 downto 48));
+      when "101" => return unsigned(fastram_dataout(63 downto 56));
+      when others => return x"FF";
+    end case;
+  end fastram_byte_plus2; 
+  
   -- purpose: set processor flags from a byte (eg for PLP or RTI)
   procedure load_processor_flags (
     value : in unsigned(7 downto 0)) is
@@ -826,34 +858,6 @@ begin
       end case;
     end if;
   end procedure execute_implied_instruction;
-
-  procedure execute_direct_instruction (
-    i       : in instruction;
-    address : in unsigned(15 downto 0)) is
-  begin  -- execute_direct_instruction
-    -- Instruction using a direct addressing mode
-    if i=I_STA or i=I_STX or i=I_STY then
-      -- Store instruction, so just write
-      case i is
-        when I_STA => write_data_byte(address,reg_a,InstructionFetch);
-        when I_STX => write_data_byte(address,reg_x,InstructionFetch);
-        when I_STY => write_data_byte(address,reg_y,InstructionFetch);
-        when others => state <= InstructionFetch;
-      end case;
-    else
-      -- Instruction requires reading from memory
-      report "reading operand from memory" severity note;
-      reg_instruction <= i;
-      reg_addr <= address; -- remember address for writeback
-      if address(15 downto 8) = x"00" then
-        -- Data is from ZP
-        execute_operand_instruction(reg_instruction,read_zp(address(7 downto 0)),
-                                    address);
-      else
-        read_data_byte(address,ExecuteDirect);
-      end if;
-    end if;
-  end execute_direct_instruction;
 
   procedure alu_op_cmp (
     i1 : in unsigned(7 downto 0);
@@ -1005,6 +1009,36 @@ begin
     end case;
   end procedure execute_operand_instruction;
 
+
+  procedure execute_direct_instruction (
+    i       : in instruction;
+    address : in unsigned(15 downto 0)) is
+  begin  -- execute_direct_instruction
+    -- Instruction using a direct addressing mode
+    if i=I_STA or i=I_STX or i=I_STY then
+      -- Store instruction, so just write
+      case i is
+        when I_STA => write_data_byte(address,reg_a,InstructionFetch);
+        when I_STX => write_data_byte(address,reg_x,InstructionFetch);
+        when I_STY => write_data_byte(address,reg_y,InstructionFetch);
+        when others => state <= InstructionFetch;
+      end case;
+    else
+      -- Instruction requires reading from memory
+      report "reading operand from memory" severity note;
+      reg_instruction <= i;
+      reg_addr <= address; -- remember address for writeback
+      if address(15 downto 8) = x"00" then
+        -- Data is from ZP
+        execute_operand_instruction(i,
+                                    read_zp(address(7 downto 0)),
+                                    address);
+      else
+        read_data_byte(address,ExecuteDirect);
+      end if;
+    end if;
+  end execute_direct_instruction;
+  
   function flag_status (
     yes : in string;
     no : in string;
@@ -1025,6 +1059,7 @@ begin
     ) is
     variable i : instruction := instruction_lut(to_integer(opcode));
     variable mode : addressingmode := mode_lut(to_integer(opcode));
+    variable temp_pc : unsigned(15 downto 0);
   begin
     -- By default fetch next instruction
     state <= InstructionFetch;
@@ -1051,7 +1086,8 @@ begin
       -- Treat jump instructions specially, since they are rather different to
       -- the rest.
     elsif i=I_JSR then
-      reg_pc <= arg2 & arg1; push_byte(reg_pc_instruction(15 downto 8),JSR1);
+      temp_pc := reg_pc_instruction + 2;
+      reg_pc <= arg2 & arg1; push_byte(temp_pc(15 downto 8),JSR1);
     elsif i=I_JMP and mode=M_absolute then
       reg_pc <= arg2 & arg1; state<=InstructionFetch;
     elsif i=I_JMP and mode=M_indirect then
@@ -1187,6 +1223,10 @@ begin
             when VectorRead2 => reg_pc(7 downto 0) <= read_data; read_instruction_byte(vector+1,VectorRead3);
             when VectorRead3 => reg_pc(15 downto 8) <= read_data; state <= InstructionFetch;
             when InstructionFetch =>
+              -- keep PC for JSR and other branches because PC value is not settled
+              -- until later in instruction execution if chipram fast instruction
+              -- fetching occurs.
+              reg_pc_instruction <= reg_pc;
 
               -- Show CPU state for debugging
               -- report "state = " & processor_state'image(state) severity note;
@@ -1269,7 +1309,6 @@ begin
               if mode_bytes_lut(mode_lut(to_integer(opcode)))=2 then
                 arg1 <= read_data;
                 reg_pc <= reg_pc + 1;
-                reg_pc_jsr <= reg_pc;     -- keep PC after one operand for JSR
                 read_instruction_byte(reg_pc,InstructionFetch4);
               else
                 execute_instruction(opcode,read_data,x"00",0);
@@ -1291,7 +1330,9 @@ begin
             when RTS1 => reg_pc(7 downto 0) <= read_data; pull_byte(RTS2);
             when RTS2 => reg_pc <= (read_data & reg_pc(7 downto 0))+1;
                          state<=InstructionFetch;
-            when JSR1 => push_byte(reg_pc_jsr(7 downto 0),InstructionFetch);
+            when JSR1 =>
+              temp_pc := reg_pc_instruction + 2;
+              push_byte(temp_pc(7 downto 0),InstructionFetch);
             when JMP1 =>
               -- Add a wait state to see if it fixes our problem with not loading
               -- addresses properly for indirect jump
