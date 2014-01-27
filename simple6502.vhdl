@@ -845,7 +845,13 @@ begin
       report "reading operand from memory" severity note;
       reg_instruction <= i;
       reg_addr <= address; -- remember address for writeback
-      read_data_byte(address,ExecuteDirect);
+      if address(15 downto 8) = x"00" then
+        -- Data is from ZP
+        execute_operand_instruction(reg_instruction,read_zp(address(7 downto 0)),
+                                    address);
+      else
+        read_data_byte(address,ExecuteDirect);
+      end if;
     end if;
   end execute_direct_instruction;
 
