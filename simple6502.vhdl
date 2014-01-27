@@ -105,7 +105,7 @@ architecture Behavioural of simple6502 is
   
   signal fastram_byte_number : unsigned(2 DOWNTO 0);
   -- Cache most recent fastram read address
-  signal fastram_fetch_address : unsigned(16 downto 0) := (others => '1');
+  signal fastram_fetch_address : unsigned(13 downto 0) := (others => '1');
   
 -- CPU internal state
   signal flag_c : std_logic;        -- carry flag
@@ -453,7 +453,7 @@ begin
   end read_address;
 
   -- purpose: read a ZP address (using ZP cache to do it this cycle)
-  function read_zp (
+  impure function read_zp (
     address : unsigned(7 downto 0))
     return unsigned is
   begin  -- read_zp
@@ -1056,13 +1056,17 @@ begin
     elsif mode=M_indirectX then
       -- Read ZP indirect from data memory map, since ZP is written into that
       -- map.
-      reg_instruction <= i;
-      reg_addr <= x"00" & (arg1 + reg_x +1);
-      read_data_byte(x"00" & (arg1 + reg_x),IndirectX1);
+      --reg_instruction <= i;
+      --reg_addr <= x"00" & (arg1 + reg_x +1);
+      --read_data_byte(x"00" & (arg1 + reg_x),IndirectX1);
+      -- Use ZP cache to advance this instruction and save two memory reads
+      read_data_byte((read_zp(arg1 + reg_x +1) & read_zp(arg1 + reg_x)),IndirectX3);
     elsif mode=M_indirectY then
-      reg_instruction <= i;
-      reg_addr <= x"00" & (arg1 + 1);
-      read_data_byte(x"00" & arg1,IndirectY1);
+      --reg_instruction <= i;
+      --reg_addr <= x"00" & (arg1 + 1);
+      --read_data_byte(x"00" & arg1,IndirectY1);
+      -- Use ZP cache to advance this instruction and save two memory reads
+      read_data_byte((read_zp(arg1 + 1) & read_zp(arg1)) + reg_y,IndirectY3);
     else
       --report "executing direct instruction" severity note;
       case mode is
