@@ -1020,7 +1020,8 @@ begin
   procedure execute_instruction (      
     opcode : in unsigned(7 downto 0);
     arg1 : in unsigned(7 downto 0);
-    arg2 : in unsigned(7 downto 0)
+    arg2 : in unsigned(7 downto 0);
+    reg_pc_delta : in integer
     ) is
     variable i : instruction := instruction_lut(to_integer(opcode));
     variable mode : addressingmode := mode_lut(to_integer(opcode));
@@ -1042,15 +1043,15 @@ begin
         or (i=I_BNE and flag_z='0') then
         -- take branch
         if arg1(7)='0' then -- branch forwards.
-          reg_pc <= reg_pc + unsigned(arg1(6 downto 0));
+          reg_pc <= reg_pc + unsigned(arg1(6 downto 0)) + reg_pc_delta;
         else -- branch backwards.
-          reg_pc <= (reg_pc - x"0080") + unsigned(arg1(6 downto 0));
+          reg_pc <= (reg_pc - x"0080") + unsigned(arg1(6 downto 0)) + reg_pc_delta;
         end if;
       end if;
       -- Treat jump instructions specially, since they are rather different to
       -- the rest.
     elsif i=I_JSR then
-      reg_pc <= arg2 & arg1; push_byte(reg_pc_jsr(15 downto 8),JSR1);
+      reg_pc <= arg2 & arg1; push_byte(reg_pc_instruction(15 downto 8),JSR1);
     elsif i=I_JMP and mode=M_absolute then
       reg_pc <= arg2 & arg1; state<=InstructionFetch;
     elsif i=I_JMP and mode=M_indirect then
@@ -1235,9 +1236,34 @@ begin
                 -- 1-byte instruction, process now
                 execute_implied_instruction(read_data);
               else
-                opcode <= read_data;
+                opcode <= read_data;                
                 reg_pc <= reg_pc + 1;
-                read_instruction_byte(reg_pc,InstructionFetch3);
+                if accessing_ram='1'
+                  and fastram_byte_number(2 downto 1) /= "11" then
+                  -- We read the instruction from chipram, and there is at
+                  -- least two more bytes available.
+                  reg_pc <= reg_pc + mode_bytes_lut(mode_lut(to_integer(read_data)));
+                  execute_instruction(read_data,
+                                      fastram_byte_plus1,fastram_byte_plus2,
+                                      mode_bytes_lut(mode_lut(to_integer(read_data)))                                     );
+                elsif accessing_ram='1'
+                  and fastram_byte_number(2 downto 1) /= "111"
+                  and mode_bytes_lut(mode_lut(to_integer(read_data)))=2 then
+                  -- We read the instruction from chipram, and there is one
+                  -- more byte available.  If that is sufficient, execute
+                  -- instruction now, else schedule read for the 2nd arg.
+                  reg_pc <= reg_pc + 2;
+                  execute_instruction(read_data,fastram_byte_plus1,x"00",2);
+                elsif accessing_ram='1'
+                  and fastram_byte_number(2 downto 1) /= "111"
+                  and mode_bytes_lut(mode_lut(to_integer(read_data)))=3 then
+                  arg1 <= fastram_byte_plus1;
+                  reg_pc <= reg_pc + 2;
+                  read_instruction_byte(reg_pc,InstructionFetch4);
+                else
+                  -- No extra bytes handy to short circuit instruction fetchin
+                  read_instruction_byte(reg_pc,InstructionFetch3);
+                end if;
               end if;
             when InstructionFetch3 =>
               if mode_bytes_lut(mode_lut(to_integer(opcode)))=2 then
@@ -1246,10 +1272,10 @@ begin
                 reg_pc_jsr <= reg_pc;     -- keep PC after one operand for JSR
                 read_instruction_byte(reg_pc,InstructionFetch4);
               else
-                execute_instruction(opcode,read_data,x"00");
+                execute_instruction(opcode,read_data,x"00",0);
               end if;
             when InstructionFetch4 =>
-              execute_instruction(opcode,arg1,read_data);
+              execute_instruction(opcode,arg1,read_data,0);
             when BRK1 => push_byte(reg_pc(7 downto 0),BRK2);
             when BRK2 =>
               -- set B flag in P before pushing
