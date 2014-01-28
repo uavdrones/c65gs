@@ -827,34 +827,6 @@ begin
     end if;
   end procedure execute_implied_instruction;
 
-  procedure execute_direct_instruction (
-    i       : in instruction;
-    address : in unsigned(15 downto 0)) is
-  begin  -- execute_direct_instruction
-    -- Instruction using a direct addressing mode
-    if i=I_STA or i=I_STX or i=I_STY then
-      -- Store instruction, so just write
-      case i is
-        when I_STA => write_data_byte(address,reg_a,InstructionFetch);
-        when I_STX => write_data_byte(address,reg_x,InstructionFetch);
-        when I_STY => write_data_byte(address,reg_y,InstructionFetch);
-        when others => state <= InstructionFetch;
-      end case;
-    else
-      -- Instruction requires reading from memory
-      report "reading operand from memory" severity note;
-      reg_instruction <= i;
-      reg_addr <= address; -- remember address for writeback
-      if address(15 downto 8) = x"00" then
-        -- Data is from ZP
-        execute_operand_instruction(reg_instruction,read_zp(address(7 downto 0)),
-                                    address);
-      else
-        read_data_byte(address,ExecuteDirect);
-      end if;
-    end if;
-  end execute_direct_instruction;
-
   procedure alu_op_cmp (
     i1 : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0)) is
@@ -1005,6 +977,33 @@ begin
     end case;
   end procedure execute_operand_instruction;
 
+  procedure execute_direct_instruction (
+    i       : in instruction;
+    address : in unsigned(15 downto 0)) is
+  begin  -- execute_direct_instruction
+    -- Instruction using a direct addressing mode
+    if i=I_STA or i=I_STX or i=I_STY then
+      -- Store instruction, so just write
+      case i is
+        when I_STA => write_data_byte(address,reg_a,InstructionFetch);
+        when I_STX => write_data_byte(address,reg_x,InstructionFetch);
+        when I_STY => write_data_byte(address,reg_y,InstructionFetch);
+        when others => state <= InstructionFetch;
+      end case;
+    else
+      -- Instruction requires reading from memory
+      report "reading operand from memory" severity note;
+      reg_instruction <= i;
+      reg_addr <= address; -- remember address for writeback
+      if address(15 downto 8) = x"00" then
+        -- Data is from ZP
+        execute_operand_instruction(i,read_zp(address(7 downto 0)),address);
+      else
+        read_data_byte(address,ExecuteDirect);
+      end if;
+    end if;
+  end execute_direct_instruction;
+  
   function flag_status (
     yes : in string;
     no : in string;
@@ -1062,16 +1061,18 @@ begin
     elsif mode=M_indirectX then
       -- Read ZP indirect from data memory map, since ZP is written into that
       -- map.
-      --reg_instruction <= i;
+      reg_instruction <= i;
       --reg_addr <= x"00" & (arg1 + reg_x +1);
-      --read_data_byte(x"00" & (arg1 + reg_x),IndirectX1);
+      --read_data_byte(x"00" & (arg1 + reg_x),IndirectX1);      
       -- Use ZP cache to advance this instruction and save two memory reads
+      reg_addr <= (read_zp(arg1 + reg_x +1) & read_zp(arg1 + reg_x));
       read_data_byte((read_zp(arg1 + reg_x +1) & read_zp(arg1 + reg_x)),IndirectX3);
     elsif mode=M_indirectY then
-      --reg_instruction <= i;
+      reg_instruction <= i;
       --reg_addr <= x"00" & (arg1 + 1);
       --read_data_byte(x"00" & arg1,IndirectY1);
       -- Use ZP cache to advance this instruction and save two memory reads
+      reg_addr <= (read_zp(arg1 + 1) & read_zp(arg1)) + reg_y;
       read_data_byte((read_zp(arg1 + 1) & read_zp(arg1)) + reg_y,IndirectY3);
     else
       --report "executing direct instruction" severity note;
