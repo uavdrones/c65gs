@@ -139,6 +139,7 @@ architecture Behavioural of simple6502 is
     RTS1,RTS2,
     JSR1,JSRind1,JSRind2,JSRind3,JSRind4,
     JMP1,JMP2,JMP3,
+    BranchOnBit,
     PHWimm1,
     IndirectX1,IndirectX2,IndirectX3,
     IndirectY1,IndirectY2,IndirectY3,
@@ -263,6 +264,8 @@ architecture Behavioural of simple6502 is
   signal reg_instruction : instruction;
   -- Temporary value holder (used for RMW instructions)
   signal reg_value : unsigned(7 downto 0);
+  -- Tempory opcode holder for BBR/BBS instructions
+  signal reg_opcode : unsigned(7 downto 0);
   
 -- Indicate source of operand for instructions
 -- Note that ROM is actually implemented using
@@ -1016,7 +1019,12 @@ begin
     --report "Executing " & instruction'image(i)
     --  & " mode " & addressingmode'image(mode) severity note;
     
-    if mode=M_rr or mode=M_rrrr then
+    if mode=M_nnrr then
+      -- Branch on bit set/clear
+      -- (the bit in question depends on the opcode)
+      reg_opcode <= opcode;
+      read_data_byte(reg_b & arg1,BranchOnBit);
+    elsif mode=M_rr or mode=M_rrrr then
       if (i=I_BCC and flag_c='0')
         or (i=I_BCS and flag_c='1')
         or (i=I_BVC and flag_v='0')
@@ -1079,12 +1087,12 @@ begin
       -- Read ZP indirect from data memory map, since ZP is written into that
       -- map.
       reg_instruction <= i;
-      reg_addr <= x"00" & (arg1 + reg_x +1);
-      read_data_byte(x"00" & (arg1 + reg_x),IndirectX1);
+      reg_addr <= reg_b & (arg1 + reg_x +1);
+      read_data_byte(reg_b & (arg1 + reg_x),IndirectX1);
     elsif mode=M_InnY then
       reg_instruction <= i;
-      reg_addr <= x"00" & (arg1 + 1);
-      read_data_byte(x"00" & arg1,IndirectY1);
+      reg_addr <= reg_b & (arg1 + 1);
+      read_data_byte(reg_b & arg1,IndirectY1);
     elsif mode=M_InnSPY then
       -- Whacked out 4510 addressing mode pre-indexed by SP, post-indexed by Y
       -- (presumably used for accessing stack variables)
@@ -1094,8 +1102,8 @@ begin
       read_data_byte(((reg_sph & reg_sp) + arg1),IndirectY1);
     elsif mode=M_InnZ then
       reg_instruction <= i;
-      reg_addr <= x"00" & (arg1 + 1);
-      read_data_byte(x"00" & arg1,IndirectZ1);
+      reg_addr <= reg_b & (arg1 + 1);
+      read_data_byte(reg_b & arg1,IndirectZ1);
     else
       --report "executing direct instruction" severity note;
       case mode is
@@ -1273,7 +1281,7 @@ begin
                 reg_pc_jsr <= reg_pc;     -- keep PC after one operand for JSR
                 read_instruction_byte(reg_pc,InstructionFetch4);
               else
-                execute_instruction(opcode,read_data,x"00");
+                execute_instruction(opcode,read_data,reg_b);
               end if;
             when InstructionFetch4 =>
               execute_instruction(opcode,arg1,read_data);
@@ -1306,6 +1314,16 @@ begin
             when JSRind4 =>
               reg_pc(15 downto 8) <= read_data;
               state <= InstructionFetch;
+            when BranchOnBit =>
+              -- Branch if bit set/clear in ZP byte we have just read.
+              if read_data(to_integer(reg_opcode(6 downto 4)))=reg_opcode(7) then
+                -- Take branch
+                if arg1(7)='0' then -- branch forwards.
+                  reg_pc <= reg_pc + unsigned(arg1(6 downto 0));
+                else -- branch backwards.
+                  reg_pc <= (reg_pc - x"0080") + unsigned(arg1(6 downto 0));
+                end if;
+              end if;   
             when PHWimm1 => push_byte(reg_value,InstructionFetch);
             when JMP1 =>
               -- Add a wait state to see if it fixes our problem with not loading
