@@ -80,6 +80,7 @@ architecture Behavioral of machine is
     port (
       reset : in std_logic;
       clock : in std_logic;
+      pixelclock : in std_logic;
       tx : out std_logic;
       rx : in  std_logic;
       activity : out std_logic;
@@ -299,7 +300,7 @@ begin
       -- 3 = 48MHz
       -- 191 = 1MHz
       -- (don't forget to update uart_monitor baudrate divisor as well)
-      if cpuclock_divisor<2 then
+      if cpuclock_divisor<10 then
         cpuclock_divisor <= cpuclock_divisor + 1;
       else
         cpuclock_divisor <= 0;
@@ -478,6 +479,7 @@ begin
   monitor0 : uart_monitor port map (
     reset => btnCpuReset,
     clock => cpuclock,
+    pixelclock => pixelclock,
     tx       => UART_TXD,
     rx       => RsRx,
 

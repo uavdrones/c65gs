@@ -8,6 +8,7 @@ entity uart_monitor is
   port (
     reset : in std_logic;
     clock : in std_logic;
+    pixelclock : in std_logic;
     tx : out std_logic;
     rx : in  std_logic;
     activity : out std_logic;
@@ -164,13 +165,13 @@ begin
   uart_tx0: uart_tx_ctrl
     port map (
       send    => tx_trigger,
-      clk     => clock,
+      clk     => pixelclock,
       data    => tx_data,
       ready   => tx_ready,
       uart_tx => tx);
 
   uart_rx0: uart_rx 
-    Port map ( clk => clock,
+    Port map ( clk => pixelclock,
                UART_RX => rx,
                data => rx_data,
                data_ready => rx_ready,

@@ -51,13 +51,17 @@ architecture Behavioral of UART_TX_CTRL is
 
 type TX_STATE_TYPE is (RDY, LOAD_BIT, SEND_BIT);
 
--- Input clock = 64MHz, baudrate = 230400
+-- Input clock = 192MHz, baudrate = 230400
+-- 192MHz/2/230400 -1 = 420 clock ticks per bit
+constant BIT_TMR_MAX : unsigned(13 downto 0) := "00001101001000";
 -- 96MHz/2/230400 -1 = 210 clock ticks per bit
 -- constant BIT_TMR_MAX : unsigned(13 downto 0) := "00000011010010";
 -- 64MHz/2/230400 -1 = 138
-constant BIT_TMR_MAX : unsigned(13 downto 0) := "00000010001010";
+-- constant BIT_TMR_MAX : unsigned(13 downto 0) := "00000010001010";
 -- 48MHz/2/230400 -1 = 105 clock ticks per bit
 -- constant BIT_TMR_MAX : unsigned(13 downto 0) := "00000001100111";
+-- 17.46MHz/2/230400 -1 = 37 clock ticks per bit
+-- constant BIT_TMR_MAX : unsigned(13 downto 0) := "00000000100101";
 constant BIT_INDEX_MAX : natural := 10;
 
 --Counter that keeps track of the number of clock cycles the current bit has been held stable over the
