@@ -113,6 +113,7 @@ architecture Behavioral of machine is
       reset : in std_logic;
       irq : in std_logic;
       nmi : in std_logic;
+      interfacerom_at_c000 : in std_logic;
       monitor_pc : out std_logic_vector(15 downto 0);
       monitor_opcode : out std_logic_vector(7 downto 0);
       monitor_a : out std_logic_vector(7 downto 0);
@@ -197,7 +198,8 @@ architecture Behavioral of machine is
       fastio_wdata : in std_logic_vector(7 downto 0);
       fastio_rdata : out std_logic_vector(7 downto 0);
 
-      colourram_at_dc00 : out std_logic
+      colourram_at_dc00 : out std_logic;
+      interfacerom_at_c000 : out std_logic := '0'
       );
   end component;
   
@@ -250,6 +252,7 @@ architecture Behavioral of machine is
   signal cpuclock_divisor : integer := 0;
 
   signal colourram_at_dc00 : std_logic := '0';
+  signal interfacerom_at_c000 : std_logic := '0';
 
   signal monitor_pc : std_logic_vector(15 downto 0);
   signal monitor_state : std_logic_vector(7 downto 0);
@@ -392,6 +395,9 @@ begin
     reset =>btnCpuReset,
     irq => combinedirq,
     nmi => combinednmi,
+
+    interfacerom_at_c000 => interfacerom_at_c000,
+    
     monitor_pc => monitor_pc,
     monitor_opcode => monitor_opcode,
     monitor_a => monitor_a,

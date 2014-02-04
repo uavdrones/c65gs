@@ -37,6 +37,9 @@ entity simple6502 is
     reset : in std_logic;
     irq : in std_logic;
     nmi : in std_logic;
+
+    interfacerom_at_c000 : in std_logic;
+    
     monitor_pc : out std_logic_vector(15 downto 0);
     monitor_opcode : out std_logic_vector(7 downto 0);
     monitor_a : out std_logic_vector(7 downto 0);
@@ -329,11 +332,6 @@ begin
     ram_bank_registers_write(11) <= x"000B";
     ram_bank_registers_instructions(11) <= x"FFEB";
 
-    -- For debugging, HESMON at $C000-$CFFF
-    ram_bank_registers_read(12) <= x"FFEC";
-    ram_bank_registers_write(12) <= x"FFEC";
-    ram_bank_registers_instructions(12) <= x"FFEC";
-    
     -- For simulation: our own rom at $E000 - $FFFF, also mapping to $0000-$0FFF
     -- since fastram doesn't work in simulation with GHDL.
     --ram_bank_registers_read(14) <= x"FFFE";
@@ -525,6 +523,14 @@ begin
     ram_bank_registers_instructions(page) <= target;
     ram_bank_registers_read(page) <= target;
   end map_c64mode_rom;
+
+  procedure map_rom (
+    page : in integer;
+    target : in unsigned(15 downto 0)) is
+  begin  -- map_local_ram
+    ram_bank_registers_instructions(page) <= target;
+    ram_bank_registers_read(page) <= target;
+  end map_rom;
 
   procedure map_io (
     page : in integer) is
@@ -1300,6 +1306,14 @@ end c65_map_instruction;
   variable temp_pc : unsigned(15 downto 0);
   begin
     if rising_edge(clock) then
+
+      if rising_edge(interfacerom_at_c000) then
+        map_rom(12,x"FFEC");
+      end if;
+      if falling_edge(interfacerom_at_c000) then
+        map_local_ram(12);
+      end if;
+      
       monitor_state <= std_logic_vector(to_unsigned(processor_state'pos(state),8));
       monitor_pc <= std_logic_vector(reg_pc);
       monitor_a <= std_logic_vector(reg_a);

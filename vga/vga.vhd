@@ -74,7 +74,8 @@ entity vga is
     fastio_wdata : in std_logic_vector(7 downto 0);
     fastio_rdata : out std_logic_vector(7 downto 0);
 
-    colourram_at_dc00 : out std_logic
+    colourram_at_dc00 : out std_logic;
+    interfacerom_at_c000 : out std_logic := '0'
     );
 end vga;
 
@@ -1019,6 +1020,7 @@ begin
           -- ROM @ E000
           -- CROM @ 9000 (use C65 char rom @ 9000 instead of the C64 one at D000)
           -- ROM @ C000
+          interfacerom_at_c000 <= fastio_wdata(5);
           -- ROM @ A000
           -- ROM @ 8000
           -- PAL
