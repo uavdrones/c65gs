@@ -398,7 +398,10 @@ begin
       accessing_slowram <= '1';
       -- XXX Need to do actual slow ram access here.
       state <= next_state;
-    elsif long_address(27 downto 24) = x"F" then
+    -- IO is $Fxxxxxx and also $0020000-$003FFFF for C65 ROM mapping
+    elsif long_address(27 downto 24) = x"F"
+      or long_address(27 downto 17)&'0' = x"002"
+    then
       accessing_fastio <= '1';
       fastio_addr <= std_logic_vector(long_address(19 downto 0));
       fastio_read <= '1';

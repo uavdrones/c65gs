@@ -54,10 +54,10 @@ architecture behavioral of iomapper is
       data_i : in std_logic_vector(7 downto 0);
       data_o : out std_logic_vector(7 downto 0));
   end component;
-  component hesmonc000 is
+  component interfacec000 is
     port (
       Clk : in std_logic;
-      address : in std_logic_vector(12 downto 0);
+      address : in std_logic_vector(11 downto 0);
       we : in std_logic;
       cs : in std_logic;
       data_i : in std_logic_vector(7 downto 0);
@@ -123,12 +123,23 @@ architecture behavioral of iomapper is
       );
   end component;
 
-
+  -- C65 high 64KB ROM
   signal kernel65cs : std_logic;
+  signal c65graphicsa000cs : std_logic;
+  signal c65graphics8000cs : std_logic;
+  signal c65basic6000cs : std_logic;
+  signal c65basic4000cs : std_logic;
+  signal c65basic2000cs : std_logic;
+  signal c65monitorcs : std_logic;
+  
+  -- C65 low 64KB ROM
   signal kernel64cs : std_logic;
+  signal interfacec000cs : std_logic;
   signal basic64cs : std_logic;
-  signal hesmonc000cs : std_logic;
-
+  signal c65charromcs : std_logic;
+  signal c65doshighcs : std_logic;
+  signal c65doslowcs : std_logic;
+  
   signal clock50hz : std_logic := '1';
   constant divisor50hz : integer := 640000; -- 64MHz/50Hz/2;
   signal counter50hz : integer := 0;
@@ -166,11 +177,11 @@ begin
     data_i  => data_i,
     data_o  => data_o);
 
-  hesmonc000rom : hesmonc000 port map (
+  interfacec000rom : interfacec000 port map (
     clk     => clk,
-    address => address(12 downto 0),
+    address => address(11 downto 0),
     we      => w,
-    cs      => hesmonc000cs,
+    cs      => interfacec000cs,
     data_i  => data_i,
     data_o  => data_o);
   
@@ -252,27 +263,75 @@ begin
     last_scan_code(11 downto 8) <= unsigned(cia1porta_out(3 downto 0));
     
     if (r or w) = '1' then
-      if address(19 downto 13)&'0' = x"FE" then
+      if address(19 downto 13)&'0' = x"FE" or address(19 downto 13)&'0' = x"3E" then
         kernel65cs<= '1';
       else
         kernel65cs <='0';
       end if;
-      if address(19 downto 13)&'0' = x"EE" then
+      
+      if address(19 downto 13)&'0' = x"3A" then
+        c65graphicsa000cs <= '1';
+      else
+        c65graphicsa000cs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"38" then
+        c65graphics8000cs <= '1';
+      else
+        c65graphics8000cs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"36" then
+        c65basic6000cs <= '1';
+      else
+        c65basic6000cs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"34" then
+        c65basic4000cs <= '1';
+      else
+        c65basic4000cs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"32" then
+        c65basic2000cs <= '1';
+      else
+        c65basic2000cs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"30" then
+        c65monitorcs <= '1';
+      else
+        c65monitorcs <= '0';
+      end if;
+
+      
+      if address(19 downto 13)&'0' = x"EE" or address(19 downto 13)&'0' = x"2E" then
         kernel64cs<= '1';
       else
         kernel64cs <='0';
       end if;
-      if address(19 downto 12) = x"EC" then
-        hesmonc000cs<= '1';
+      if address(19 downto 12) = x"EC" or address(19 downto 12) = x"2C" then
+        interfacec000cs<= '1';
       else
-        hesmonc000cs <='0';
+        interfacec000cs <='0';
       end if;
-      if address(19 downto 13)&'0' = x"EA" then
+      if address(19 downto 13)&'0' = x"EA" or address(19 downto 13)&'0' = x"2A" then
         basic64cs<= '1';
       else
         basic64cs <='0';
       end if;
-
+      if address(19 downto 13)&'0' = x"28" then
+        c65charromcs <= '1';
+      else
+        c65charromcs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"22" then
+        c65doshighcs <= '1';
+      else
+        c65doshighcs <= '0';
+      end if;
+      if address(19 downto 13)&'0' = x"20" then
+        c65doslowcs <= '1';
+      else
+        c65doslowcs <= '0';
+      end if;
+        
       -- Now map the CIAs.
 
       -- These are a bit fun, because they only get mapped if colour RAM isn't

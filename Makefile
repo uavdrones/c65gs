@@ -29,8 +29,8 @@ kernel64.vhdl:	rom_template.vhdl kernel64.bin makerom
 basic64.vhdl:	rom_template.vhdl basic64.bin makerom
 	./makerom rom_template.vhdl basic64.bin basic64
 
-interfacec000.vhdl:	rom_template.vhdl c65-interface-rom.bin makerom
-	./makerom rom_template.vhdl c65-interface-rom.bin interfacec000
+interfacec000.vhdl:	rom_4k_template.vhdl c65-interface-rom.bin makerom
+	./makerom rom_4k_template.vhdl c65-interface-rom.bin interfacec000
 
 transfer:
 	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
