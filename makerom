@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import os;
 from os.path import realpath, dirname, join
 from sys import argv, path
 
 # Read a binary file and use it to make an initialised RAM
 
-w=open(argv[3]+".vhdl","w")
+w=open(argv[3],"w")
+name, ext = os.path.splitext(argv[3]);
 
 # Read in combined kernel and basic ROM
 romdata=""
@@ -31,7 +33,7 @@ lines=open(argv[1]).readlines()
 
 for line in lines:
     if line.find("THEROM")>-1:
-        line=line.replace("THEROM",argv[3])
+        line=line.replace("THEROM",name)
     if line.find("ROMDATA")>-1:
         line=line.replace("ROMDATA",romdata)
     w.write(line)
