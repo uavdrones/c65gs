@@ -1,0 +1,7 @@
+interfacec000.vhdl
+charrom.vhdl
+basic64.vhdl
+kernel64.vhdl
+kernel65.vhdl
+c65-rom-910111.bin
+*.bin
