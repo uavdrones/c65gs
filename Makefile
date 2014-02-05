@@ -20,8 +20,8 @@ transfer:
 	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
 
 
-simulate:	bcdadder.vhdl alu6502.vhdl cpu6502.vhdl kernel65.vhdl kernel64.vhdl basic64.vhdl iomapper.vhdl container.vhd cpu_test.vhdl vga.vhd simple6502.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl interfacec000.vhdl ghdl_ram64x16k.vhdl
-	ghdl -c kernel65.vhdl kernel64.vhdl basic64.vhdl iomapper.vhdl container.vhd cpu_test.vhdl vga.vhd simple6502.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl interfacec000.vhdl ghdl_ram64x16k.vhdl -r cpu_test
+simulate:	bcdadder.vhdl alu6502.vhdl cpu6502.vhdl kernel65.vhdl kernel64.vhdl basic64.vhdl iomapper.vhdl container.vhd cpu_test.vhdl vga.vhd simple6502.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl interfacec000.vhdl char64.vhdl char65.vhdl c65basic2000.vhdl c65basic4000.vhdl c65basic6000.vhdl c65doslow.vhdl c65doshigh.vhdl c65graphics8000.vhdl c65graphicsa000.vhdl c65monitor.vhdl ghdl_ram64x16k.vhdl
+	ghdl -c kernel65.vhdl kernel64.vhdl basic64.vhdl iomapper.vhdl container.vhd cpu_test.vhdl vga.vhd simple6502.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl interfacec000.vhdl char64.vhdl char65.vhdl c65basic2000.vhdl c65basic4000.vhdl c65basic6000.vhdl c65doslow.vhdl c65doshigh.vhdl c65graphics8000.vhdl c65graphicsa000.vhdl c65monitor.vhdl ghdl_ram64x16k.vhdl -r cpu_test
 
 testcia:	tb_cia.vhdl cia6526.vhdl debugtools.vhdl
 	ghdl -c tb_cia.vhdl cia6526.vhdl debugtools.vhdl -r tb_cia
@@ -81,26 +81,29 @@ c65basic4000.bin:	c65-rom-910111.bin
 c65basic6000.bin:	c65-rom-910111.bin
 	dd if=c65-rom-910111.bin of=c65basic6000.bin bs=4096 count=2 skip=22
 
-c65graphics.bin:	c65-rom-910111.bin
-	dd if=c65-rom-910111.bin of=c65graphics.bin bs=4096 count=2 skip=24
+c65graphics8000.bin:	c65-rom-910111.bin
+	dd if=c65-rom-910111.bin of=c65graphics8000.bin bs=4096 count=2 skip=24
+
+c65graphicsa000.bin:	c65-rom-910111.bin
+	dd if=c65-rom-910111.bin of=c65graphicsa000.bin bs=4096 count=2 skip=26
 
 kernel65.bin:	c65-rom-910111.bin
 	dd if=c65-rom-910111.bin of=kernel65.bin bs=4096 count=2 skip=30
 
 kernel65.vhdl:	rom_template.vhdl kernel65.bin makerom
-	./makerom rom_template.vhdl kernel65.bin kernel65
+	./makerom rom_template.vhdl kernel65.bin kernel65.vhdl
 
 kernel64.vhdl:	rom_template.vhdl kernel64.bin makerom
-	./makerom rom_template.vhdl kernel64.bin kernel64
+	./makerom rom_template.vhdl kernel64.bin kernel64.vhdl
 
 basic64.vhdl:	rom_template.vhdl basic64.bin makerom
-	./makerom rom_template.vhdl basic64.bin basic64
+	./makerom rom_template.vhdl basic64.bin basic64.vhdl
 
 interfacec000.vhdl:	rom_4k_template.vhdl interface.bin makerom
 	./makerom rom_4k_template.vhdl interface.bin interfacec000
 
 char64.vhdl:	rom_4k_template.vhdl char64.bin makerom
-	./makerom rom_4k_template.vhdl char64.bin char64
+	./makerom rom_4k_template.vhdl char64.bin char64.vhdl
 
 %.vhdl:	%.bin makerom rom_template.vhdl Makefile
 	./makerom rom_template.vhdl $< $@

@@ -54,10 +54,100 @@ architecture behavioral of iomapper is
       data_i : in std_logic_vector(7 downto 0);
       data_o : out std_logic_vector(7 downto 0));
   end component;
+  component c65doslow is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65doshigh is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65basic2000 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65basic4000 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65basic6000 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65graphics8000 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65graphicsa000 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component c65monitor is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
   component interfacec000 is
     port (
       Clk : in std_logic;
       address : in std_logic_vector(11 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component char64 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(11 downto 0);
+      we : in std_logic;
+      cs : in std_logic;
+      data_i : in std_logic_vector(7 downto 0);
+      data_o : out std_logic_vector(7 downto 0));
+  end component;
+  component char65 is
+    port (
+      Clk : in std_logic;
+      address : in std_logic_vector(12 downto 0);
       we : in std_logic;
       cs : in std_logic;
       data_i : in std_logic_vector(7 downto 0);
@@ -136,7 +226,8 @@ architecture behavioral of iomapper is
   signal kernel64cs : std_logic;
   signal interfacec000cs : std_logic;
   signal basic64cs : std_logic;
-  signal c65charromcs : std_logic;
+  signal char64cs : std_logic;
+  signal char65cs : std_logic;
   signal c65doshighcs : std_logic;
   signal c65doslowcs : std_logic;
   
@@ -184,7 +275,87 @@ begin
     cs      => interfacec000cs,
     data_i  => data_i,
     data_o  => data_o);
-  
+
+  char64rom : char64 port map (
+    clk     => clk,
+    address => address(11 downto 0),
+    we      => w,
+    cs      => char64cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  char65rom : char65 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => char65cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65doslowrom : c65doslow port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65doslowcs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65doshighrom : c65doshigh port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65doshighcs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65basic2000rom : c65basic2000 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65basic2000cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65basic4000rom : c65basic4000 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65basic4000cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65basic6000rom : c65basic6000 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65basic6000cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65graphics8000rom : c65graphics8000 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65graphics8000cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65graphicsa000rom : c65graphicsa000 port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65graphicsa000cs,
+    data_i  => data_i,
+    data_o  => data_o);
+
+  c65monitorrom : c65monitor port map (
+    clk     => clk,
+    address => address(12 downto 0),
+    we      => w,
+    cs      => c65monitorcs,
+    data_i  => data_i,
+    data_o  => data_o);
+
   cia1: cia6526 port map (
     cpuclock => clk,
     todclock => clock50hz,
@@ -306,6 +477,11 @@ begin
       else
         kernel64cs <='0';
       end if;
+      if address(19 downto 12) = x"2D" then
+        char64cs <= '1';
+      else
+        char64cs <= '0';
+      end if;
       if address(19 downto 12) = x"EC" or address(19 downto 12) = x"2C" then
         interfacec000cs<= '1';
       else
@@ -317,9 +493,9 @@ begin
         basic64cs <='0';
       end if;
       if address(19 downto 13)&'0' = x"28" then
-        c65charromcs <= '1';
+        char65cs <= '1';
       else
-        c65charromcs <= '0';
+        char65cs <= '0';
       end if;
       if address(19 downto 13)&'0' = x"22" then
         c65doshighcs <= '1';
