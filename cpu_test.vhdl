@@ -36,7 +36,8 @@ architecture behavior of cpu_test is
   signal sseg_an : std_logic_vector(7 downto 0);
   
   component machine is
-    Port ( pixelclock : STD_LOGIC;         
+    Port ( pixelclock : in STD_LOGIC;
+           cpuclock : in STD_LOGIC;
            btnCpuReset : in  STD_LOGIC;
            irq : in  STD_LOGIC;
            nmi : in  STD_LOGIC;
@@ -79,6 +80,7 @@ begin
   core0: machine
     port map (
       pixelclock      => clock,
+      cpuclock        => clock,
       btnCpuReset      => reset,
       irq => '1',
       nmi => '1',

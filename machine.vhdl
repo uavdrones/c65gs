@@ -33,7 +33,8 @@ use Std.TextIO.all;
 --use UNISIM.VComponents.all;
 
 entity machine is
-  Port ( pixelclock : STD_LOGIC;
+  Port ( pixelclock : in STD_LOGIC;
+         cpuclock : in STD_LOGIC;
          btnCpuReset : in  STD_LOGIC;
          irq : in  STD_LOGIC;
          nmi : in  STD_LOGIC;
@@ -248,9 +249,6 @@ architecture Behavioral of machine is
   signal vga_fastramaddress : std_logic_vector(13 downto 0);
   signal vga_fastramdata : std_logic_vector(63 downto 0);
   
-  signal cpuclock : std_logic := '1';
-  signal cpuclock_divisor : integer := 0;
-
   signal colourram_at_dc00 : std_logic := '0';
   signal interfacerom_at_c000 : std_logic := '0';
 
@@ -296,17 +294,6 @@ begin
     variable digit : std_logic_vector(3 downto 0);
   begin
     if rising_edge(pixelclock) then
-
-      -- 2 = 64MHz
-      -- 3 = 48MHz
-      -- 191 = 1MHz
-      -- (don't forget to update uart_monitor baudrate divisor as well)
-      if cpuclock_divisor<1 then
-        cpuclock_divisor <= cpuclock_divisor + 1;
-      else
-        cpuclock_divisor <= 0;
-        cpuclock <= not cpuclock;
-      end if;
       
       led0 <= irq;
       led1 <= nmi;

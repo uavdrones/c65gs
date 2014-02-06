@@ -268,93 +268,93 @@ begin
     data_i  => data_i,
     data_o  => data_o);
 
-  interfacec000rom : interfacec000 port map (
-    clk     => clk,
-    address => address(11 downto 0),
-    we      => w,
-    cs      => interfacec000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --interfacec000rom : interfacec000 port map (
+  --  clk     => clk,
+  --  address => address(11 downto 0),
+  --  we      => w,
+  --  cs      => interfacec000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  char64rom : char64 port map (
-    clk     => clk,
-    address => address(11 downto 0),
-    we      => w,
-    cs      => char64cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --char64rom : char64 port map (
+  --  clk     => clk,
+  --  address => address(11 downto 0),
+  --  we      => w,
+  --  cs      => char64cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  char65rom : char65 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => char65cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --char65rom : char65 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => char65cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65doslowrom : c65doslow port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65doslowcs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65doslowrom : c65doslow port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65doslowcs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65doshighrom : c65doshigh port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65doshighcs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65doshighrom : c65doshigh port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65doshighcs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65basic2000rom : c65basic2000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65basic2000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65basic2000rom : c65basic2000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65basic2000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65basic4000rom : c65basic4000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65basic4000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65basic4000rom : c65basic4000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65basic4000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65basic6000rom : c65basic6000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65basic6000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65basic6000rom : c65basic6000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65basic6000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65graphics8000rom : c65graphics8000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65graphics8000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65graphics8000rom : c65graphics8000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65graphics8000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65graphicsa000rom : c65graphicsa000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65graphicsa000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65graphicsa000rom : c65graphicsa000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65graphicsa000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  c65monitorrom : c65monitor port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => c65monitorcs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --c65monitorrom : c65monitor port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => c65monitorcs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
   cia1: cia6526 port map (
     cpuclock => clk,
