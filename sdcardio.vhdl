@@ -143,7 +143,7 @@ begin  -- behavioural
           when x"4" => fastio_rdata <= unsigned(sd_sector(31 downto 24));        
           when others => fastio_rdata <= (others => 'Z');
         end case;
-      elsif (sector_buffer_mapped='1') and
+      elsif (sector_buffer_mapped='1') and (sdio_busy='0') and
         (fastio_addr(19 downto 9)&'0' = x"D1E"
           or fastio_addr(19 downto 9)&'0' = x"D3E") then
         -- Map sector buffer at $DE00-$DFFF when required
@@ -196,7 +196,7 @@ begin  -- behavioural
           when x"4" => sd_sector(31 downto 24) <= std_logic_vector(fastio_wdata);
           when others => null;
         end case;
-      elsif (sector_buffer_mapped='1') and
+      elsif (sector_buffer_mapped='1') and (sdio_busy='0') and
         (fastio_addr(19 downto 9)&'0' = x"D1E"
           or fastio_addr(19 downto 9)&'0' = x"D3E") then
         -- Map sector buffer at $DE00-$DFFF when required
