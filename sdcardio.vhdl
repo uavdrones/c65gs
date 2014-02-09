@@ -300,11 +300,9 @@ begin  -- behavioural
             end if;
           when DoneReadingSector =>
             sdio_busy <= '0';
-            sector_buffer_mapped <= '1';
             sd_state <= Idle;
           when DoneWritingSector =>
             sdio_busy <= '0';
-            sector_buffer_mapped <= '1';
             sd_state <= Idle;
           when others =>
             sd_state <= Idle;
