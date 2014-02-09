@@ -6,6 +6,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.CommonPckg.all;
+use work.SdCardPckg.all;
 
 entity sdcardio is
   port (
@@ -38,7 +39,8 @@ architecture behavioural of sdcardio is
       FREQ_G          : real       := 100.0;  -- Master clock frequency (MHz).
       INIT_SPI_FREQ_G : real       := 0.4;  -- Slow SPI clock freq. during initialization (MHz).
       SPI_FREQ_G      : real       := 25.0;  -- Operational SPI freq. to the SD card (MHz).
-      BLOCK_SIZE_G    : natural    := 512  -- Number of bytes in an SD card block or sector.
+      BLOCK_SIZE_G    : natural    := 512;  -- Number of bytes in an SD card block or sector.
+      CARD_TYPE_G     : CardType_t := SD_CARD_E  -- Type of SD card connected to this controller.
       );
     port (
       -- Host-side interface signals.
@@ -112,7 +114,8 @@ begin  -- behavioural
   u3 : SdCardCtrl
     generic map (
       -- XXX Fix FREQ_G to be based off pixelclock, not variable cpuclock
-      FREQ_G => 48.0                   -- CPU at 48MHz
+      FREQ_G => 48.0,                   -- CPU at 48MHz
+      CARD_TYPE_G => SDHC_CARD_E  -- Type of SD card connected to this c
       )
     port map (
       clk_i      => clock,
