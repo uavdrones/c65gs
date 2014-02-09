@@ -258,7 +258,9 @@ begin  -- behavioural
           when x"5" => fastio_rdata <= unsigned(sd_errorcode(7 downto 0));        
           when x"6" => fastio_rdata <= unsigned(sd_errorcode(15 downto 8));
           when x"7" => fastio_rdata <= to_unsigned(sd_state_t'pos(sd_state),8);
-          when x"8" => fastio_rdata <= unsigned("0000000" & fsm_running);
+          when x"8" =>
+            fastio_rdata(7 downto 1) <= (others => '1');
+            fastio_rdata(0) <= fsm_running;
           when others => fastio_rdata <= (others => 'Z');
         end case;
       elsif (sector_buffer_mapped='1') and (sdio_busy='0') and
