@@ -173,7 +173,7 @@ begin  -- behavioural
             --        must be set for ALT to work.
             --NOBUF   clears the buffer read/write pointers
             --           fastio_rdata <= (others => 'Z');
-            case fastio_rdata is
+            case fastio_wdata is
               when x"01" =>
                 -- Clear buffer pointers
                 f011_buffer_last_written <= (others => '0');
