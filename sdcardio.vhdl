@@ -88,9 +88,17 @@ architecture behavioural of sdcardio is
   -- Counter for reading/writing sector
   signal sector_offset : unsigned(8 downto 0);
 
+  type sd_state_t is (Idle,
+                      ReadSector,ReadingSector,ReadingSectorAckByte,DoneReadingSector,
+                      WriteSector,WritingSector,WritingSectorAckByte,
+                      DoneWritingSector);
+  signal sd_state : sd_state_t := Idle;
+
+  signal fsm_running : std_logic := '0';
+  
 begin  -- behavioural
 
-    --**********************************************************************
+  --**********************************************************************
   -- SD card controller module.
   --**********************************************************************
   u3 : SdCardCtrl
@@ -141,11 +149,14 @@ begin  -- behavioural
           when x"2" => fastio_rdata <= unsigned(sd_sector(15 downto 8));
           when x"3" => fastio_rdata <= unsigned(sd_sector(23 downto 16));
           when x"4" => fastio_rdata <= unsigned(sd_sector(31 downto 24));        
+          when x"5" => fastio_rdata <= unsigned(sd_errorcode(7 downto 0));        
+          when x"6" => fastio_rdata <= unsigned(sd_errorcode(15 downto 8));
+          when x"7" => fastio_rdata <= to_unsigned(sd_state_t'pos(sd_state),8);
           when others => fastio_rdata <= (others => 'Z');
         end case;
       elsif (sector_buffer_mapped='1') and (sdio_busy='0') and
         (fastio_addr(19 downto 9)&'0' = x"D1E"
-          or fastio_addr(19 downto 9)&'0' = x"D3E") then
+         or fastio_addr(19 downto 9)&'0' = x"D3E") then
         -- Map sector buffer at $DE00-$DFFF when required
         fastio_rdata <= sector_buffer(to_integer(fastio_addr(8 downto 0)));
       else
@@ -167,23 +178,34 @@ begin  -- behavioural
               when x"00" =>
                 -- Reset SD card
                 sd_reset <= '1';
-                -- XXX also clear our state machine
+                if fsm_running='0' then
+                  sd_state <= Idle;
+                else
+                  fsm_running <= '0';
+                end if;
               when x"01" =>
                 -- End reset
                 sd_reset <= '0';
+                if fsm_running='0' then
+                  sd_state <= Idle;
+                else
+                  fsm_running <= '0';
+                end if;
               when x"02" =>
                 -- Read sector
-                if sdio_busy='1' then
+                if sdio_busy='1' or fsm_running='1' then
                   sdio_error <= '1';
                 else
-                  null;
+                  sd_state <= ReadSector;
+                  fsm_running <= '1';
                 end if;
               when x"03" =>
                 -- Write sector
-                if sdio_busy='1' then
+                if sdio_busy='1' or fsm_running='1' then
                   sdio_error <= '1';
-                else
-                  null;
+                else                  
+                  sd_state <= WriteSector;
+                  fsm_running <= '1';
                 end if;
               when x"81" => sector_buffer_mapped<='1';
               when x"82" => sector_buffer_mapped<='0';
@@ -198,12 +220,101 @@ begin  -- behavioural
         end case;
       elsif (sector_buffer_mapped='1') and (sdio_busy='0') and
         (fastio_addr(19 downto 9)&'0' = x"D1E"
-          or fastio_addr(19 downto 9)&'0' = x"D3E") then
+         or fastio_addr(19 downto 9)&'0' = x"D3E") then
         -- Map sector buffer at $DE00-$DFFF when required
         sector_buffer(to_integer(fastio_addr(8 downto 0))) <= fastio_wdata;
       end if;
-    end if;
+    end if;    
+    
+  end process;
 
+  process (clock) is
+  begin
+    if rising_edge(clock) then
+      if fsm_running='1' then
+        case sd_state is
+          when Idle => fsm_running<='0';
+          when ReadSector =>
+            -- Begin reading a sector into the buffer
+            if sd_busy='1' then
+              rd_is <= '0';
+              sd_state <= ReadingSector;
+              sdio_busy <= '1';
+              sector_offset <= (others => '0');
+            else
+              rd_is <= '1';
+            end if;
+          when ReadingSector =>
+            if hndShk_os='1' then
+              -- A byte is ready to read, so store it
+              sector_buffer(to_integer(sector_offset)) <= unsigned(sd_rdata);
+              -- Tell controller that we have latched it
+              hndShk_is <= '1';
+              sd_state <= ReadingSectorAckByte;
+              sector_offset <= sector_offset + 1;
+            end if;
+          when ReadingSectorAckByte =>
+            -- Wait until controller acknowledges that we have acked it
+            if hndShk_os='0' then
+              hndShk_is <= '0';
+              if sector_offset = "000000000" then
+                -- sector offset has wrapped back to zero, so we must have
+                -- read the whole sector.
+                sd_state <= DoneReadingSector;
+              else
+                -- Still more bytes to read.
+                sd_state <= ReadingSector;
+              end if;
+            end if;
+          when WriteSector =>
+            -- Begin writing a sector into the buffer
+            if sd_busy='1' then
+              wr_is <= '0';
+              sdio_busy <= '1';
+              sd_state <= WritingSector;
+              sector_offset <= (others => '0');
+            else
+              wr_is <= '1';
+            end if;
+          when WritingSector =>
+            if hndShk_os='1' then
+              -- A byte is ready to read, so store it
+              sd_wdata <= std_logic_vector(sector_buffer(to_integer(sector_offset)));
+              -- Tell controller that we have latched it
+              hndShk_is <= '1';
+              sd_state <= WritingSectorAckByte;
+              sector_offset <= sector_offset + 1;
+            end if;
+          when WritingSectorAckByte =>
+            -- Wait until controller acknowledges that we have acked it
+            if hndShk_os='0' then
+              hndShk_is <= '0';
+              if sector_offset = "000000000" then
+                -- sector offset has wrapped back to zero, so we must have
+                -- read the whole sector.
+                sd_state <= DoneWritingSector;
+              else
+                -- Still more bytes to read.
+                sd_state <= WritingSector;
+              end if;
+            end if;
+          when DoneReadingSector =>
+            sdio_busy <= '0';
+            sector_buffer_mapped <= '1';
+            sd_state <= Idle;
+          when DoneWritingSector =>
+            sdio_busy <= '0';
+            sector_buffer_mapped <= '1';
+            sd_state <= Idle;
+          when others =>
+            sd_state <= Idle;
+            sdio_busy <= '0';
+            sdio_error <= '1';
+        end case;    
+      else
+        sd_state <= Idle;
+      end if;
+    end if;
   end process;
   
 end behavioural;
