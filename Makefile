@@ -62,3 +62,15 @@ dis4510:	dis4510.c
 
 sdcard.vhdl:
 	wget -O sdcard.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/SDCard.vhd
+
+common.vhdl:
+	wget -O common.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/Common.vhd
+
+clkgen.vhdl:
+	wget -O clkgen.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/ClkGen.vhd
+
+hostio.vhdl:
+	wget -O hostio.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/HostIo.vhd
+
+synctoclk.vhdl:
+	wget -O synctoclk.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/SyncToClk.vhd

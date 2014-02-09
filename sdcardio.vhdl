@@ -85,7 +85,7 @@ begin  -- behavioural
   u3 : SdCardCtrl
     generic map (
       -- XXX Fix FREQ_G to be based off pixelclock, not variable cpuclock
-      FREQ_G => 48.0;                   -- CPU at 48MHz
+      FREQ_G => 48.0                   -- CPU at 48MHz
       )
     port map (
       clk_i      => cpuclock,
@@ -110,6 +110,7 @@ begin  -- behavioural
 
   -- XXX also implement F1011 floppy controller emulation.
   process (cpuclock,fastio_addr,fastio_wdata) is
+  begin
     if fastio_read='1' then
       if (fastio_addr(19 downto 4) = x"D168"
           or fastio_addr(19 downto 4) = x"D368") then
@@ -146,14 +147,21 @@ begin  -- behavioural
           when x"0" =>
             -- status / command register
             case fastio_wdata use
+              when x"00" =>
+                -- Reset SD card
+                sd_reset <= '1';
+                -- XXX also clear our state machine
               when x"01" =>
+                -- End reset
+                sd_reset <= '0';
+              when x"02" =>
                 -- Read sector
                 if sdio_busy='1' then
                   sdio_error <= '1';
                 else
                   null;
                 end if;
-              when x"02" =>
+              when x"03" =>
                 -- Write sector
                 if sdio_busy='1' then
                   sdio_error <= '1';
