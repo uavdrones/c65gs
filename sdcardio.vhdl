@@ -132,8 +132,89 @@ begin  -- behavioural
            sd_reset,fastio_read,sd_sector,fastio_write) is
   begin
     if fastio_read='1' then
-      if (fastio_addr(19 downto 4) = x"D168"
-          or fastio_addr(19 downto 4) = x"D368") then
+      if (fastio_addr(19 downto 5)&'0' = x"D108"
+          or fastio_addr(19 downto 5)&'0' = x"D308") then
+        -- F011 FDC emulation registers
+        case "000"&fastio_addr(4 downto 0) is
+          when x"00" =>
+            -- CONTROL |  IRQ  |  LED  | MOTOR | SWAP  | SIDE  |  DS2  |  DS1  |  DS0  | 0 RW
+            --IRQ     When set, enables interrupts to occur,  when reset clears and
+            --        disables interrupts.
+            --LED     These  two  bits  control  the  state  of  the  MOTOR and LED
+            --MOTOR   outputs. When both are clear, both MOTOR and LED outputs will
+            --        be off. When MOTOR is set, both MOTOR and LED Outputs will be
+            --        on. When LED is set, the LED will "blink".
+            --SWAP    swaps upper and lower halves of the data buffer
+            --        as seen by the CPU.
+            --SIDE    when set, sets the SIDE output to 0, otherwise 1.
+            --DS2-DS0 these three bits select a drive (drive 0 thru drive 7).  When
+            --        DS0-DS2  are  low  and  the LOCAL input is true (low) the DR0
+            --        output will go true (low).
+            fastio_rdata <= (others => 'Z');
+          when x"01" =>
+            -- COMMAND | WRITE | READ  | FREE  | STEP  |  DIR  | ALGO  |  ALT  | NOBUF | 1 RW
+            --WRITE   must be set to perform write operations.
+            --READ    must be set for all read operations.
+            --FREE    allows free-format read or write vs formatted
+            --STEP    write to 1 to cause a head stepping pulse.
+            --DIR     sets head stepping direction
+            --ALGO    selects read and write algorithm. 0=FC read, 1=DPLL read,
+            --        0=normal write, 1=precompensated write.
+
+            --ALT     selects alternate DPLL read recovery method. The ALG0 bit
+            --        must be set for ALT to work.
+            --NOBUF   clears the buffer read/write pointers
+            --           fastio_rdata <= (others => 'Z');
+          when x"02" =>
+            -- STAT A  | BUSY  |  DRQ  |  EQ   |  RNF  |  CRC  | LOST  | PROT  |  TKQ  | 2 R
+            --BUSY    command is being executed
+            --DRQ     disk interface has transferred a byte
+            --EQ      buffer CPU/Disk pointers are equal
+            --RNF     sector not found during formatted write or read
+            --CRC     CRC check failed
+            --LOST    data was lost during transfer
+            --PROT    disk is write protected
+            --TK0     head is positioned over track zero
+
+            fastio_rdata <= (others => 'Z');
+          when x"03" =>
+            -- STAT B  | RDREQ | WTREQ |  RUN  | NGATE | DSKIN | INDEX |  IRQ  | DSKCHG| 3 R
+            -- RDREQ   sector found during formatted read
+            -- WTREQ   sector found during formatted write
+            -- RUN     indicates successive matches during find operation
+            -- WGATE   write gate is on
+            -- DSKIN   indicates that a disk is inserted in the drive
+            -- INDEX   disk index is currently over sensor
+            -- IRQ     an interrupt has occurred
+            -- DSKCHG  the DSKIN line has changed
+            --         this is cleared by deselecting drive
+            fastio_rdata <= (others => 'Z');
+          when x"04" =>
+            -- TRACK   |  T7   |  T6   |  T5   |  T4   |  T3   |  T2   |  T1   |  T0   | 4 RW
+            fastio_rdata <= f011_track;
+          when x"05" =>
+            -- SECTOR  |  S7   |  S6   |  S5   |  S4   |  S3   |  S2   |  S1   |  S0   | 5 RW
+            fastio_rdata <= f011_sector;
+          when x"06" =>
+            -- SIDE    |  S7   |  S6   |  S5   |  S4   |  S3   |  S2   |  S1   |  S0   | 6 RW
+            fastio_rdata <= f011_side;
+          when x"07" =>
+            -- DATA    |  D7   |  D6   |  D5   |  D4   |  D3   |  D2   |  D1   |  D0   | 7 RW
+            fastio_rdata <= f011_data;
+          when x"08" =>
+            -- CLOCK   |  C7   |  C6   |  C5   |  C4   |  C3   |  C2   |  C1   |  C0   | 8 RW
+            fastio_rdata <= (others => 'Z');
+          when x"09" =>
+            -- STEP    |  S7   |  S6   |  S5   |  S4   |  S3   |  S2   |  S1   |  S0   | 9 RW
+            fastio_rdata <= (others => 'Z');
+          when x"0a" =>
+            -- P CODE  |  P7   |  P6   |  P5   |  P4   |  P3   |  P2   |  P1   |  P0   | A R
+            fastio_rdata <= (others => 'Z');
+          when others =>
+            fastio_rdata <= (others => 'Z');
+        end case;
+      elsif (fastio_addr(19 downto 4) = x"D168"
+             or fastio_addr(19 downto 4) = x"D368") then
         -- microSD controller registers
         case fastio_addr(3 downto 0) is
           when x"0" =>
