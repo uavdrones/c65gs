@@ -96,9 +96,13 @@ architecture behavioural of sdcardio is
 
   signal fsm_running : std_logic := '0';
 
+  -- F011 FDC emulation registers and flags
   signal f011_track : unsigned(7 downto 0) := x"00";
   signal f011_sector : unsigned(7 downto 0) := x"00";
   signal f011_side : unsigned(7 downto 0) := x"00";
+  signal f011_buffer_last_written : unsigned(8 downto 0) := (others => '0');
+  signal f011_buffer_last_read : unsigned(8 downto 0) := (others => '0');
+  signal f011_flag_eq : std_logic := '1';
   
 begin  -- behavioural
 
@@ -169,6 +173,20 @@ begin  -- behavioural
             --        must be set for ALT to work.
             --NOBUF   clears the buffer read/write pointers
             --           fastio_rdata <= (others => 'Z');
+            case fastio_rdata is
+              when x"01" =>
+                -- Clear buffer pointers
+                f011_buffer_last_written <= (others => '0');
+                f011_buffer_last_read <= (others => '0');
+                f011_flag_eq <= '1';
+              when x"40" =>
+                -- Read sector
+                null;
+              when x"80" =>
+                -- Write sector
+                null;
+              when others => null;
+            end case;
           when x"02" =>
             -- STAT A  | BUSY  |  DRQ  |  EQ   |  RNF  |  CRC  | LOST  | PROT  |  TKQ  | 2 R
             --BUSY    command is being executed
