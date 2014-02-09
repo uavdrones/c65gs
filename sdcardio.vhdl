@@ -280,9 +280,10 @@ begin  -- behavioural
       if fsm_running='1' then
         case sd_state is
           when Idle => fsm_running<='0';
+                       sdio_busy <= '0';
           when ReadSector =>
             -- Begin reading a sector into the buffer
-            if sd_busy='1' then
+            if sd_busy='0' then
               rd_is <= '0';
               sd_state <= ReadingSector;
               sdio_busy <= '1';
@@ -314,7 +315,7 @@ begin  -- behavioural
             end if;
           when WriteSector =>
             -- Begin writing a sector into the buffer
-            if sd_busy='1' then
+            if sd_busy='0' then
               wr_is <= '0';
               sdio_busy <= '1';
               sd_state <= WritingSector;
@@ -357,6 +358,7 @@ begin  -- behavioural
         end case;    
       else
         sd_state <= Idle;
+        sdio_busy <= '0';
       end if;
     end if;
 
@@ -460,89 +462,7 @@ begin  -- behavioural
         sector_buffer(to_integer(fastio_addr(8 downto 0))) <= fastio_wdata;
       end if;
     end if;    
-    if rising_edge(clock) then
-      if fsm_running='1' then
-        case sd_state is
-          when Idle => fsm_running<='0';
-          when ReadSector =>
-            -- Begin reading a sector into the buffer
-            if sd_busy='1' then
-              rd_is <= '0';
-              sd_state <= ReadingSector;
-              sdio_busy <= '1';
-              sector_offset <= (others => '0');
-            else
-              rd_is <= '1';
-            end if;
-          when ReadingSector =>
-            if hndShk_os='1' then
-              -- A byte is ready to read, so store it
-              sector_buffer(to_integer(sector_offset)) <= unsigned(sd_rdata);
-              -- Tell controller that we have latched it
-              hndShk_is <= '1';
-              sd_state <= ReadingSectorAckByte;
-              sector_offset <= sector_offset + 1;
-            end if;
-          when ReadingSectorAckByte =>
-            -- Wait until controller acknowledges that we have acked it
-            if hndShk_os='0' then
-              hndShk_is <= '0';
-              if sector_offset = "000000000" then
-                -- sector offset has wrapped back to zero, so we must have
-                -- read the whole sector.
-                sd_state <= DoneReadingSector;
-              else
-                -- Still more bytes to read.
-                sd_state <= ReadingSector;
-              end if;
-            end if;
-          when WriteSector =>
-            -- Begin writing a sector into the buffer
-            if sd_busy='1' then
-              wr_is <= '0';
-              sdio_busy <= '1';
-              sd_state <= WritingSector;
-              sector_offset <= (others => '0');
-            else
-              wr_is <= '1';
-            end if;
-          when WritingSector =>
-            if hndShk_os='1' then
-              -- A byte is ready to read, so store it
-              sd_wdata <= std_logic_vector(sector_buffer(to_integer(sector_offset)));
-              -- Tell controller that we have latched it
-              hndShk_is <= '1';
-              sd_state <= WritingSectorAckByte;
-              sector_offset <= sector_offset + 1;
-            end if;
-          when WritingSectorAckByte =>
-            -- Wait until controller acknowledges that we have acked it
-            if hndShk_os='0' then
-              hndShk_is <= '0';
-              if sector_offset = "000000000" then
-                -- sector offset has wrapped back to zero, so we must have
-                -- read the whole sector.
-                sd_state <= DoneWritingSector;
-              else
-                -- Still more bytes to read.
-                sd_state <= WritingSector;
-              end if;
-            end if;
-          when DoneReadingSector =>
-            sdio_busy <= '0';
-            sd_state <= Idle;
-          when DoneWritingSector =>
-            sdio_busy <= '0';
-            sd_state <= Idle;
-          when others =>
-            sd_state <= Idle;
-            sdio_busy <= '0';
-            sdio_error <= '1';
-        end case;    
-      else
-        sd_state <= Idle;
-      end if;
-    end if;
+
   end process;
   
 end behavioural;
