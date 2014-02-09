@@ -59,3 +59,6 @@ dis4510:	dis4510.c
 
 4510tables:	4510tables.c
 	gcc -g -Wall -o 4510tables 4510tables.c
+
+sdcard.vhdl:
+	wget -O sdcard.vhdl https://raw2.github.com/xesscorp/XuLA2/master/FPGA/XuLA_lib/SDCard.vhd
