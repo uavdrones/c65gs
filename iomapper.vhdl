@@ -82,6 +82,7 @@ architecture behavioral of iomapper is
       -- fast IO port (clocked at core clock). 1MB address space
       ---------------------------------------------------------------------------
       fastio_addr : in unsigned(19 downto 0);
+      fastio_read : in std_logic;
       fastio_write : in std_logic;
       fastio_wdata : in unsigned(7 downto 0);
       fastio_rdata : out unsigned(7 downto 0);
@@ -268,6 +269,7 @@ begin
 
     fastio_addr => unsigned(address),
     fastio_write => w,
+    fastio_read => r,
     fastio_wdata => unsigned(data_i),
     std_logic_vector(fastio_rdata) => data_o,
 

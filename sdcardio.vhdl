@@ -1,3 +1,12 @@
+use WORK.ALL;
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use ieee.numeric_std.all;
+use Std.TextIO.all;
+use work.debugtools.all;
+use work.CommonPckg.all;
+
 entity sdcardio is
   port (
     clock : in std_logic;
@@ -9,6 +18,7 @@ entity sdcardio is
     ---------------------------------------------------------------------------
     fastio_addr : in unsigned(19 downto 0);
     fastio_write : in std_logic;
+    fastio_read : in std_logic;
     fastio_wdata : in unsigned(7 downto 0);
     fastio_rdata : out unsigned(7 downto 0);
 
@@ -29,8 +39,7 @@ architecture behavioural of sdcardio is
       FREQ_G          : real       := 100.0;  -- Master clock frequency (MHz).
       INIT_SPI_FREQ_G : real       := 0.4;  -- Slow SPI clock freq. during initialization (MHz).
       SPI_FREQ_G      : real       := 25.0;  -- Operational SPI freq. to the SD card (MHz).
-      BLOCK_SIZE_G    : natural    := 512;  -- Number of bytes in an SD card block or sector.
-      CARD_TYPE_G     : CardType_t := SD_CARD_E  -- Type of SD card connected to this controller.
+      BLOCK_SIZE_G    : natural    := 512  -- Number of bytes in an SD card block or sector.
       );
     port (
       -- Host-side interface signals.
@@ -58,13 +67,18 @@ architecture behavioural of sdcardio is
   signal wr_is           : std_logic;
   signal rdFromPc_s      : std_logic;
   signal wrFromPc_s      : std_logic;
-  signal continue_is     : std_logic;
-  signal sdsector        : std_logic_vector(31 downto 0);
+  signal hndShk_is       : std_logic;
+  signal hndShk_os       : std_logic;
+  
+  signal sd_continue     : std_logic;
+  signal sd_sector       : std_logic_vector(31 downto 0);
   signal sd_rdata        : std_logic_vector(7 downto 0);
   signal sd_wdata        : std_logic_vector(7 downto 0);
   signal sd_busy         : std_logic;   -- busy line from SD card itself
-  signal sd_error        : std_logic_vector(15 downto 0);
-
+  signal sd_error        : std_logic;
+  signal sd_errorcode    : std_logic_vector(15 downto 0);
+  signal sd_reset        : std_logic := '1';
+  
   -- IO mapped register to indicate if SD card interface is busy
   signal sdio_busy : std_logic := '0';
   signal sdio_error : std_logic := '0';
@@ -88,9 +102,9 @@ begin  -- behavioural
       FREQ_G => 48.0                   -- CPU at 48MHz
       )
     port map (
-      clk_i      => cpuclock,
+      clk_i      => clock,
       -- Internal control signals
-      reset_i    => reset_is,
+      reset_i    => sd_reset,
       rd_i       => rd_is,
       wr_i       => wr_is,
       continue_i => sd_continue,
@@ -100,7 +114,7 @@ begin  -- behavioural
       busy_o     => sd_busy,
       hndShk_i   => hndShk_is,
       hndShk_o   => hndShk_os,
-      error_o    => sd_error,
+      error_o    => sd_errorcode,
       -- External signals to SD card slot
       cs_bo      => cs_bo,
       sclk_o     => sclk_o,
@@ -109,28 +123,33 @@ begin  -- behavioural
       );
 
   -- XXX also implement F1011 floppy controller emulation.
-  process (cpuclock,fastio_addr,fastio_wdata) is
+  process (clock,fastio_addr,fastio_wdata) is
   begin
     if fastio_read='1' then
       if (fastio_addr(19 downto 4) = x"D168"
           or fastio_addr(19 downto 4) = x"D368") then
         -- microSD controller registers
-        case fastio_addr(3 downto 0) use
+        case fastio_addr(3 downto 0) is
           when x"0" =>
             -- status / command register
             -- error status in bit 6 so that V flag can be used for check      
-            fastio_rdata <= '0' & sdio_error & "0000" & sector_buffer_mapped & sdio_busy;
-          when x"1" => fastio_rdata <= sd_sector(7 downto 0);
-          when x"2" => fastio_rdata <= sd_sector(15 downto 8);
-          when x"3" => fastio_rdata <= sd_sector(23 downto 16);
-          when x"4" => fastio_rdata <= sd_sector(31 downto 24);        
+            fastio_rdata(7) <= '0';
+            fastio_rdata(6) <= sdio_error;
+            fastio_rdata(5 downto 3) <= "000";
+            fastio_rdata(2) <= sd_reset;
+            fastio_rdata(1) <= sector_buffer_mapped;
+            fastio_rdata(0) <= sdio_busy;
+          when x"1" => fastio_rdata <= unsigned(sd_sector(7 downto 0));
+          when x"2" => fastio_rdata <= unsigned(sd_sector(15 downto 8));
+          when x"3" => fastio_rdata <= unsigned(sd_sector(23 downto 16));
+          when x"4" => fastio_rdata <= unsigned(sd_sector(31 downto 24));        
           when others => fastio_rdata <= (others => 'Z');
         end case;
       elsif sector_buffer_mapped='1' and
         (fastio_addr(19 downto 9)&'0' = x"D1E"
           or fastio_addr(19 downto 9)&'0' = x"D3E") then
         -- Map sector buffer at $DE00-$DFFF when required
-        fastio_rdata <= sector_buffer(to_integer(fastio_addr(8 downto 0)))
+        fastio_rdata <= sector_buffer(to_integer(fastio_addr(8 downto 0)));
       else
         -- Otherwise tristate output
         fastio_rdata <= (others => 'Z');
@@ -143,10 +162,10 @@ begin  -- behavioural
       if (fastio_addr(19 downto 4) = x"D168"
           or fastio_addr(19 downto 4) = x"D368") then
         -- microSD controller registers
-        case fastio_addr(3 downto 0) use
+        case fastio_addr(3 downto 0) is
           when x"0" =>
             -- status / command register
-            case fastio_wdata use
+            case fastio_wdata is
               when x"00" =>
                 -- Reset SD card
                 sd_reset <= '1';
@@ -167,15 +186,16 @@ begin  -- behavioural
                   sdio_error <= '1';
                 else
                   null;
-                end if;              when others =>
+                end if;
+              when x"81" => sector_buffer_mapped<='1';
+              when x"82" => sector_buffer_mapped<='0';
+              when others =>
                 sdio_error <= '1';
-              when x"81" => sector_buffer_mapped='1';
-              when x"82" => sector_buffer_mapped='0';
             end case;
-          when x"1" => sd_sector(7 downto 0) <= fastio_wdata;
-          when x"2" => sd_sector(15 downto 8) <= fastio_wdata;
-          when x"3" => sd_sector(23 downto 16) <= fastio_wdata;
-          when x"4" => sd_sector(31 downto 24) <= fastio_wdata;
+          when x"1" => sd_sector(7 downto 0) <= std_logic_vector(fastio_wdata);
+          when x"2" => sd_sector(15 downto 8) <= std_logic_vector(fastio_wdata);
+          when x"3" => sd_sector(23 downto 16) <= std_logic_vector(fastio_wdata);
+          when x"4" => sd_sector(31 downto 24) <= std_logic_vector(fastio_wdata);
           when others => null;
         end case;
       elsif sector_buffer_mapped='1' and
