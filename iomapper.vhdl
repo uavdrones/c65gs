@@ -74,14 +74,13 @@ architecture behavioral of iomapper is
 
   component sdcardio is
     port (
-      cpuclock : in std_logic;
+      clock : in std_logic;
       reset : in std_logic;
       irq : out std_logic := '1';
 
       ---------------------------------------------------------------------------
       -- fast IO port (clocked at core clock). 1MB address space
       ---------------------------------------------------------------------------
-      cs : in std_logic;
       fastio_addr : in unsigned(7 downto 0);
       fastio_write : in std_logic;
       fastio_wdata : in unsigned(7 downto 0);
@@ -262,6 +261,22 @@ begin
     std_logic_vector(fastio_rdata) => data_o
     );
 
+  sdcard0 : sdcardio port map (
+    clock => clk,
+    reset => reset,
+    irq => irq,
+
+    fastio_addr => unsigned(address),
+    fastio_write => w,
+    fastio_wdata => unsigned(data_i),
+    std_logic_vector(fastio_rdata) => data_o,
+
+    cs_bo => cs_bo,
+    sclk_o => sclk_o,
+    mosi_o => mosi_o,
+    miso_i => miso_i
+    );
+  
   process(clk)
   begin
     if rising_edge(clk) then
