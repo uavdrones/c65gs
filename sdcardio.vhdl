@@ -72,6 +72,7 @@ architecture behavioural of sdcardio is
   -- 512 byte sector buffer
   type sector_buffer_t is array (0 to 511) of unsigned(7 downto 0);
   signal sector_buffer : sector_buffer_t;
+  signal sector_buffer_mapped : std_logic := '0';
 
   -- Counter for reading/writing sector
   signal sector_offset : unsigned(8 downto 0);
@@ -117,7 +118,7 @@ begin  -- behavioural
           when x"0" =>
             -- status / command register
             -- error status in bit 6 so that V flag can be used for check      
-            fastio_rdata <= '0' & sdio_error & "00000" & sdio_busy;
+            fastio_rdata <= '0' & sdio_error & "0000" & sector_buffer_mapped & sdio_busy;
           when x"1" => fastio_rdata <= sd_sector(7 downto 0);
           when x"2" => fastio_rdata <= sd_sector(15 downto 8);
           when x"3" => fastio_rdata <= sd_sector(23 downto 16);
@@ -160,6 +161,8 @@ begin  -- behavioural
                   null;
                 end if;              when others =>
                 sdio_error <= '1';
+              when x"81" => sector_buffer_mapped='1';
+              when x"82" => sector_buffer_mapped='0';
             end case;
           when x"1" => sd_sector(7 downto 0) <= fastio_wdata;
           when x"2" => sd_sector(15 downto 8) <= fastio_wdata;
