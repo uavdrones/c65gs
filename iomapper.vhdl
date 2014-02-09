@@ -20,6 +20,14 @@ entity iomapper is
         ps2clock : in std_logic;
         last_scan_code : out unsigned(11 downto 0);
 
+        -------------------------------------------------------------------------
+        -- Lines for the SDcard interface itself
+        -------------------------------------------------------------------------
+        cs_bo : out std_logic;
+        sclk_o : out std_logic;
+        mosi_o : out std_logic;
+        miso_i : in  std_logic;
+        
         seg_led : out unsigned(31 downto 0);
         
         colourram_at_dc00 : in std_logic
@@ -64,6 +72,31 @@ architecture behavioral of iomapper is
       data_o : out std_logic_vector(7 downto 0));
   end component;
 
+  component sdcardio is
+    port (
+      cpuclock : in std_logic;
+      reset : in std_logic;
+      irq : out std_logic := '1';
+
+      ---------------------------------------------------------------------------
+      -- fast IO port (clocked at core clock). 1MB address space
+      ---------------------------------------------------------------------------
+      cs : in std_logic;
+      fastio_addr : in unsigned(7 downto 0);
+      fastio_write : in std_logic;
+      fastio_wdata : in unsigned(7 downto 0);
+      fastio_rdata : out unsigned(7 downto 0);
+
+      -------------------------------------------------------------------------
+      -- Lines for the SDcard interface itself
+      -------------------------------------------------------------------------
+      cs_bo : out std_logic;
+      sclk_o : out std_logic;
+      mosi_o : out std_logic;
+      miso_i : in  std_logic
+      );
+  end component;
+  
   component cia6526 is
     port (
       cpuclock : in std_logic;
