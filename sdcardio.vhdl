@@ -95,6 +95,10 @@ architecture behavioural of sdcardio is
   signal sd_state : sd_state_t := Idle;
 
   signal fsm_running : std_logic := '0';
+
+  signal f011_track : unsigned(7 downto 0) := x"00";
+  signal f011_sector : unsigned(7 downto 0) := x"00";
+  signal f011_side : unsigned(7 downto 0) := x"00";
   
 begin  -- behavioural
 
@@ -200,7 +204,7 @@ begin  -- behavioural
             fastio_rdata <= f011_side;
           when x"07" =>
             -- DATA    |  D7   |  D6   |  D5   |  D4   |  D3   |  D2   |  D1   |  D0   | 7 RW
-            fastio_rdata <= f011_data;
+            fastio_rdata <= (others => 'Z');
           when x"08" =>
             -- CLOCK   |  C7   |  C6   |  C5   |  C4   |  C3   |  C2   |  C1   |  C0   | 8 RW
             fastio_rdata <= (others => 'Z');
@@ -333,8 +337,50 @@ begin  -- behavioural
     end if;
 
     if rising_edge(clock) and fastio_write='1' then
-      if (fastio_addr(19 downto 4) = x"D168"
-          or fastio_addr(19 downto 4) = x"D368") then
+      if (fastio_addr(19 downto 5)&'0' = x"D108"
+          or fastio_addr(19 downto 5)&'0' = x"D308") then
+        -- F011 FDC emulation registers
+        case "000"&fastio_addr(4 downto 0) is
+          when x"00" =>
+            -- CONTROL |  IRQ  |  LED  | MOTOR | SWAP  | SIDE  |  DS2  |  DS1  |  DS0  | 0 RW
+            --IRQ     When set, enables interrupts to occur,  when reset clears and
+            --        disables interrupts.
+            --LED     These  two  bits  control  the  state  of  the  MOTOR and LED
+            --MOTOR   outputs. When both are clear, both MOTOR and LED outputs will
+            --        be off. When MOTOR is set, both MOTOR and LED Outputs will be
+            --        on. When LED is set, the LED will "blink".
+            --SWAP    swaps upper and lower halves of the data buffer
+            --        as seen by the CPU.
+            --SIDE    when set, sets the SIDE output to 0, otherwise 1.
+            --DS2-DS0 these three bits select a drive (drive 0 thru drive 7).  When
+            --        DS0-DS2  are  low  and  the LOCAL input is true (low) the DR0
+            --        output will go true (low).
+            null;
+          when x"01" =>
+            -- COMMAND | WRITE | READ  | FREE  | STEP  |  DIR  | ALGO  |  ALT  | NOBUF | 1 RW
+            --WRITE   must be set to perform write operations.
+            --READ    must be set for all read operations.
+            --FREE    allows free-format read or write vs formatted
+            --STEP    write to 1 to cause a head stepping pulse.
+            --DIR     sets head stepping direction
+            --ALGO    selects read and write algorithm. 0=FC read, 1=DPLL read,
+            --        0=normal write, 1=precompensated write.
+
+            --ALT     selects alternate DPLL read recovery method. The ALG0 bit
+            --        must be set for ALT to work.
+            --NOBUF   clears the buffer read/write pointers
+            --           fastio_rdata <= (others => 'Z');
+            null;
+          when x"04" => f011_track <= fastio_wdata;
+          when x"05" => f011_sector <= fastio_wdata;
+          when x"06" => f011_side <= fastio_wdata;
+          when x"07" =>
+            -- Data register -- should probably be putting byte into the sector
+            -- buffer.
+          when others => null;           
+        end case;
+      elsif (fastio_addr(19 downto 4) = x"D168"
+             or fastio_addr(19 downto 4) = x"D368") then
         -- microSD controller registers
         case fastio_addr(3 downto 0) is
           when x"0" =>
