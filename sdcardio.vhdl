@@ -62,8 +62,19 @@ architecture behavioural of sdcardio is
   signal sdsector        : std_logic_vector(31 downto 0);
   signal sd_rdata        : std_logic_vector(7 downto 0);
   signal sd_wdata        : std_logic_vector(7 downto 0);
-  signal sd_busy         : std_logic;
+  signal sd_busy         : std_logic;   -- busy line from SD card itself
   signal sd_error        : std_logic_vector(15 downto 0);
+
+  -- IO mapped register to indicate if SD card interface is busy
+  signal sdio_busy : std_logic := '0';
+  signal sdio_error : std_logic := '0';
+
+  -- 512 byte sector buffer
+  type sector_buffer_t is array (0 to 511) of unsigned(7 downto 0);
+  signal sector_buffer : sector_buffer_t;
+
+  -- Counter for reading/writing sector
+  signal sector_offset : unsigned(8 downto 0);
 
 begin  -- behavioural
 
@@ -96,6 +107,7 @@ begin  -- behavioural
       miso_i     => miso_i
       );
 
+  -- XXX also implement F1011 floppy controller emulation.
   process (cpuclock,fastio_addr,fastio_wdata) is
     if fastio_read='1' then
       if (fastio_addr(19 downto 4) = x"D168"
@@ -104,7 +116,8 @@ begin  -- behavioural
         case fastio_addr(3 downto 0) use
           when x"0" =>
             -- status / command register
-            fastio_rdata <= "0000000" & busy_os;
+            -- error status in bit 6 so that V flag can be used for check      
+            fastio_rdata <= '0' & sdio_error & "00000" & sdio_busy;
           when x"1" => fastio_rdata <= sd_sector(7 downto 0);
           when x"2" => fastio_rdata <= sd_sector(15 downto 8);
           when x"3" => fastio_rdata <= sd_sector(23 downto 16);
@@ -123,6 +136,45 @@ begin  -- behavioural
     else
       fastio_rdata <= (others => 'Z');
     end if;
+
+    if rising_edge(clock) and fastio_write='1' then
+      if (fastio_addr(19 downto 4) = x"D168"
+          or fastio_addr(19 downto 4) = x"D368") then
+        -- microSD controller registers
+        case fastio_addr(3 downto 0) use
+          when x"0" =>
+            -- status / command register
+            case fastio_wdata use
+              when x"01" =>
+                -- Read sector
+                if sdio_busy='1' then
+                  sdio_error <= '1';
+                else
+                  null;
+                end if;
+              when x"02" =>
+                -- Write sector
+                if sdio_busy='1' then
+                  sdio_error <= '1';
+                else
+                  null;
+                end if;              when others =>
+                sdio_error <= '1';
+            end case;
+          when x"1" => sd_sector(7 downto 0) <= fastio_wdata;
+          when x"2" => sd_sector(15 downto 8) <= fastio_wdata;
+          when x"3" => sd_sector(23 downto 16) <= fastio_wdata;
+          when x"4" => sd_sector(31 downto 24) <= fastio_wdata;
+          when others => null;
+        end case;
+      elsif sector_buffer_mapped='1' and
+        (fastio_addr(19 downto 9)&'0' = x"D1E"
+          or fastio_addr(19 downto 9)&'0' = x"D3E") then
+        -- Map sector buffer at $DE00-$DFFF when required
+        sector_buffer(to_integer(fastio_addr(8 downto 0))) <= fastio_wdata;
+      end if;
+    end if;
+
   end process;
   
 end behavioural;
