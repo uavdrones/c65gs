@@ -76,7 +76,6 @@ architecture behavioral of iomapper is
     port (
       clock : in std_logic;
       reset : in std_logic;
-      irq : out std_logic := '1';
 
       ---------------------------------------------------------------------------
       -- fast IO port (clocked at core clock). 1MB address space
@@ -265,7 +264,6 @@ begin
   sdcard0 : sdcardio port map (
     clock => clk,
     reset => reset,
-    irq => irq,
 
     fastio_addr => unsigned(address),
     fastio_write => w,

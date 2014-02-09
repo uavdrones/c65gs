@@ -11,7 +11,6 @@ entity sdcardio is
   port (
     clock : in std_logic;
     reset : in std_logic;
-    irq : out std_logic := 'Z';
 
     ---------------------------------------------------------------------------
     -- fast IO port (clocked at core clock). 1MB address space
@@ -63,17 +62,15 @@ architecture behavioural of sdcardio is
       );
   end component;
 
-  signal rd_is           : std_logic;
-  signal wr_is           : std_logic;
-  signal rdFromPc_s      : std_logic;
-  signal wrFromPc_s      : std_logic;
-  signal hndShk_is       : std_logic;
+  signal rd_is           : std_logic := '0';
+  signal wr_is           : std_logic := '0';
+  signal hndShk_is       : std_logic := '0';
   signal hndShk_os       : std_logic;
   
-  signal sd_continue     : std_logic;
-  signal sd_sector       : std_logic_vector(31 downto 0);
+  signal sd_continue     : std_logic := '0';
+  signal sd_sector       : std_logic_vector(31 downto 0) := (others => '0');
   signal sd_rdata        : std_logic_vector(7 downto 0);
-  signal sd_wdata        : std_logic_vector(7 downto 0);
+  signal sd_wdata        : std_logic_vector(7 downto 0) := (others => '0');
   signal sd_busy         : std_logic;   -- busy line from SD card itself
   signal sd_error        : std_logic;
   signal sd_errorcode    : std_logic_vector(15 downto 0);
