@@ -174,37 +174,37 @@ architecture behavioral of iomapper is
   signal cia1portb_in : std_logic_vector(7 downto 0);
   
 begin         
-  kernel65rom : kernel65 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => kernel65cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --kernel65rom : kernel65 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => kernel65cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  kernel64rom : kernel64 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => kernel64cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --kernel64rom : kernel64 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => kernel64cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  basic64rom : basic64 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => basic64cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --basic64rom : basic64 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => basic64cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
 
-  hesmonc000rom : hesmonc000 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => hesmonc000cs,
-    data_i  => data_i,
-    data_o  => data_o);
+  --hesmonc000rom : hesmonc000 port map (
+  --  clk     => clk,
+  --  address => address(12 downto 0),
+  --  we      => w,
+  --  cs      => hesmonc000cs,
+  --  data_i  => data_i,
+  --  data_o  => data_o);
   
   cia1: cia6526 port map (
     cpuclock => clk,
@@ -346,6 +346,7 @@ begin
       kernel65cs <= '0';
       kernel64cs <= '0';
       basic64cs <= '0';
+      hesmonc000cs <= '0';
     end if;
   end process;
 
