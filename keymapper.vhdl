@@ -105,13 +105,14 @@ begin  -- behavioural
 
   -- Map recent key presses to $FFD4000 - $FFD40FF
   -- (this is a read only register set)
-  fastio: process (fastio_address,fastio_write)
+  fastio: process (fastio_address,fastio_write,douta,matrix)
   begin  -- process fastio
     if fastio_address(19 downto 8) = x"D40" and fastio_write='0' then
       keymem_fastio_cs <= '1';
       fastio_rdata <= douta;
     elsif fastio_address(19 downto 4) = x"D410" and fastio_write='0' then
       fastio_rdata <= matrix(to_integer(unsigned(fastio_address(3 downto 0))));
+      keymem_fastio_cs <= '0';
     else
       keymem_fastio_cs <= '0';
       fastio_rdata <= (others => 'Z');
