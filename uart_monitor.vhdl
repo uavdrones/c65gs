@@ -180,7 +180,7 @@ begin
                data_acknowledge => rx_acknowledge);
 
   -- purpose: test uart output
-  testclock: process (clock)
+  testclock: process (clock,reset)
     -- purpose: turn character into std_logic_vector(7 downto 0)
     function to_std_logic_vector (
       c : character)
