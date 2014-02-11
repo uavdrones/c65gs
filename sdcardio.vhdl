@@ -52,7 +52,9 @@ architecture behavioural of sdcardio is
         clk : in std_logic      -- twice the SPI clk
         );
   end component;
-    
+
+  signal skip : integer range 0 to 2;
+  
   signal sd_doread       : std_logic := '0';
   signal sd_dowrite      : std_logic := '0';
   signal data_ready : std_logic := '0';
@@ -384,6 +386,7 @@ begin  -- behavioural
               sd_state <= ReadingSector;
               sdio_busy <= '1';
               sector_offset <= (others => '0');
+              skip <= 2;
             else
               sd_doread <= '0';
             end if;
@@ -397,7 +400,12 @@ begin  -- behavioural
                 sector_buffer(to_integer(sector_offset)) <= unsigned(sd_rdata);
               end if;
               sd_state <= ReadingSectorAckByte;
-              sector_offset <= sector_offset + 1;
+              if skip=0 then
+                sector_offset <= sector_offset + 1;
+              else
+                skip <= skip - 1;
+              end if;
+
             end if;
           when ReadingSectorAckByte =>
             -- Wait until controller acknowledges that we have acked it
