@@ -376,6 +376,7 @@ begin  -- behavioural
             when x"6" => fastio_rdata <= unsigned(sd_errorcode(15 downto 8));
             when x"7" => fastio_rdata <= to_unsigned(sd_state_t'pos(sd_state),8);
             when x"8" => fastio_rdata <= sd_datatoken;
+            when x"9" => fastio_rdata <= unsigned(sd_rdata);
             when others => fastio_rdata <= (others => 'Z');
           end case;
         elsif (sector_buffer_mapped='1') and 
