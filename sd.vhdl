@@ -36,6 +36,7 @@ type states is (
 	RST,
 	INIT,
 	CMD0,
+	CMD8,
 	CMD55,
 	CMD41,
 	POLL_CMD,
@@ -108,10 +109,16 @@ begin
 				when CMD0 =>
 					cmd_out <= x"FF400000000095";
 					bit_counter := 55;
+					return_state <= CMD8;
+					state <= SEND_CMD;
+
+				when CMD8 =>
+					cmd_out <= x"FF48" & x"000001aa" & x"87"; -- 8d or 40h = 48h
+					bit_counter := 55;
 					return_state <= CMD55;
 					state <= SEND_CMD;
 
-				when CMD55 =>
+                                when CMD55 =>
 					cmd_out <= x"FF770000000001";	-- 55d OR 40h = 77h
 					bit_counter := 55;
 					return_state <= CMD41;
