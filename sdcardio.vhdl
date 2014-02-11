@@ -34,7 +34,7 @@ end sdcardio;
 
 architecture behavioural of sdcardio is
 
-  component SdCardCtrl is
+    component SdCardCtrl is
     generic (
       FREQ_G          : real       := 100.0;  -- Master clock frequency (MHz).
       INIT_SPI_FREQ_G : real       := 0.4;  -- Slow SPI clock freq. during initialization (MHz).
@@ -45,10 +45,10 @@ architecture behavioural of sdcardio is
     port (
       -- Host-side interface signals.
       clk_i      : in  std_logic;       -- Master clock.
-      reset_i    : in  std_logic := NO;  -- active-high, synchronous  reset.
-      rd_i       : in  std_logic := NO;  -- active-high read block request.
-      wr_i       : in  std_logic := NO;  -- active-high write block request.
-      continue_i : in  std_logic := NO;  -- If true, inc address and continue R/W.
+      reset_i    : in  std_logic                     := NO;  -- active-high, synchronous  reset.
+      rd_i       : in  std_logic                     := NO;  -- active-high read block request.
+      wr_i       : in  std_logic                     := NO;  -- active-high write block request.
+      continue_i : in  std_logic                     := NO;  -- If true, inc address and continue R/W.
       addr_i     : in  std_logic_vector(31 downto 0) := x"00000000";  -- Block address.
       data_i     : in  std_logic_vector(7 downto 0)  := x"00";  -- Data to write to block.
       data_o     : out std_logic_vector(7 downto 0)  := x"00";  -- Data read from block.
@@ -57,13 +57,30 @@ architecture behavioural of sdcardio is
       hndShk_o   : out std_logic;  -- High when controller has taken data or has data to give.
       error_o    : out std_logic_vector(15 downto 0) := (others => NO);
       -- I/O signals to the external SD card.
-      cs_bo      : out std_logic := HI;  -- Active-low chip-select.
-      sclk_o     : out std_logic := LO;  -- Serial clock to SD card.
-      mosi_o     : out std_logic := HI;  -- Serial data output to SD card.
-      miso_i     : in  std_logic := ZERO  -- Serial data input from SD card.
+      cs_bo      : out std_logic                     := HI;  -- Active-low chip-select.
+      sclk_o     : out std_logic                     := LO;  -- Serial clock to SD card.
+      mosi_o     : out std_logic                     := HI;  -- Serial data output to SD card.
+      miso_i     : in  std_logic                     := ZERO  -- Serial data input from SD card.
       );
   end component;
+  
+  component sd_controller is
+    port (
+        cs : out std_logic;
+        mosi : out std_logic;
+        miso : in std_logic;
+        sclk : out std_logic;
 
+        rd : in std_logic;
+        wr : in std_logic;
+        dm_in : in std_logic;   -- data mode, 0 = write continuously, 1 = write single block
+        reset : in std_logic;
+        din : in std_logic_vector(7 downto 0);
+        dout : out std_logic_vector(7 downto 0);
+        clk : in std_logic      -- twice the SPI clk
+        );
+  end component;
+    
   signal rd_is           : std_logic := '0';
   signal wr_is           : std_logic := '0';
   signal hndShk_is       : std_logic := '0';
@@ -109,32 +126,32 @@ begin  -- behavioural
   --**********************************************************************
   -- SD card controller module.
   --**********************************************************************
-  --u3 : SdCardCtrl
-  --  generic map (
-  --    -- XXX Fix FREQ_G to be based off pixelclock, not variable cpuclock
-  --    FREQ_G => 48.0,                   -- CPU at 48MHz
-  --    CARD_TYPE_G => SD_CARD_E  -- Type of SD card connected to this c
-  --    )
-  --  port map (
-  --    clk_i      => clock,
-  --    -- Internal control signals
-  --    reset_i    => sd_reset,
-  --    rd_i       => rd_is,
-  --    wr_i       => wr_is,
-  --    continue_i => '0',
-  --    addr_i     => sd_sector,
-  --    data_i     => sd_wdata,
-  --    data_o     => sd_rdata,
-  --    busy_o     => sd_busy,
-  --    hndShk_i   => hndShk_is,
-  --    hndShk_o   => hndShk_os,
-  --    error_o    => sd_errorcode,
-  --    -- External signals to SD card slot
-  --    cs_bo      => cs_bo,
-  --    sclk_o     => sclk_o,
-  --    mosi_o     => mosi_o,
-  --    miso_i     => miso_i
-  --    );
+  u3 : SdCardCtrl
+    generic map (
+      -- XXX Fix FREQ_G to be based off pixelclock, not variable cpuclock
+      FREQ_G => 48.0,                   -- CPU at 48MHz
+      CARD_TYPE_G => SD_CARD_E  -- Type of SD card connected to this c
+      )
+    port map (
+      clk_i      => clock,
+      -- Internal control signals
+      reset_i    => sd_reset,
+      rd_i       => rd_is,
+      wr_i       => wr_is,
+      continue_i => '0',
+      addr_i     => sd_sector,
+      data_i     => sd_wdata,
+      data_o     => sd_rdata,
+      busy_o     => sd_busy,
+      hndShk_i   => hndShk_is,
+      hndShk_o   => hndShk_os,
+      error_o    => sd_errorcode,
+      -- External signals to SD card slot
+      cs_bo      => cs_bo,
+      sclk_o     => sclk_o,
+      mosi_o     => mosi_o,
+      miso_i     => miso_i
+      );
 
   -- XXX also implement F1011 floppy controller emulation.
   process (clock,fastio_addr,fastio_wdata,sector_buffer_mapped,sdio_busy,
