@@ -133,10 +133,14 @@ begin
 				when IDLE => 
 					if (rd = '1') then
 						state <= READ_BLOCK;
-                                                address <= sector_number;
+                                                for i in 0 to 31 loop
+                                                  address(i) <= sector_number(31-i);
+                                                end loop;  -- i
 					elsif (wr='1') then
 						state <= WRITE_BLOCK_CMD;
-                                                address <= sector_number;
+                                                for i in 0 to 31 loop
+                                                  address(i) <= sector_number(31-i);
+                                                end loop;  -- i
 					else
 						state <= IDLE;
 					end if;
