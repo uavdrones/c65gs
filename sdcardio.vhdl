@@ -185,7 +185,20 @@ begin  -- behavioural
                     sd_state <= Idle;
                     sdio_error <= '0';
                     sdio_fsm_error <= '0';
+                    sd_sector <= (others => '0');
+                  when x"10" =>
+                    -- Reset SD card with flags specified
+                    sd_reset <= '1';
+                    sd_state <= Idle;
+                    sdio_error <= '0';
+                    sdio_fsm_error <= '0';
                   when x"01" =>
+                    -- End reset
+                    sd_reset <= '0';
+                    sd_state <= Idle;
+                    sdio_error <= '0';
+                    sdio_fsm_error <= '0';
+                  when x"11" =>
                     -- End reset
                     sd_reset <= '0';
                     sd_state <= Idle;

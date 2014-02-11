@@ -118,7 +118,8 @@ begin
 					state <= SEND_CMD;
 				
 				when CMD41 =>
-					cmd_out <= x"FF690000000001";	-- 41d OR 40h = 69h
+                                        -- Allow setting flags during CMD41
+					cmd_out <= x"FF69" & address & "01";	-- 41d OR 40h = 69h
 					bit_counter := 55;
 					return_state <= POLL_CMD;
 					state <= SEND_CMD;
