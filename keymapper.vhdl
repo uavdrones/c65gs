@@ -16,15 +16,7 @@ entity keymapper is
     porta_out : out std_logic_vector(7 downto 0);
     portb_out : out std_logic_vector(7 downto 0);
 
-    last_scan_code : out unsigned(11 downto 0) := x"0FF";
-
-    ---------------------------------------------------------------------------
-    -- Fastio interface to recent keyboard scan codes
-    ---------------------------------------------------------------------------    
-    fastio_address : in std_logic_vector(19 downto 0);
-    fastio_write : in std_logic;
-    fastio_wdata : in std_logic_vector(7 downto 0);
-    fastio_rdata : out std_logic_vector(7 downto 0)
+    last_scan_code : out unsigned(11 downto 0) := x"0FF"
     );
 
 end keymapper;

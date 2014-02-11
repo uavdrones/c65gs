@@ -142,16 +142,7 @@ architecture behavioral of iomapper is
       porta_out : out std_logic_vector(7 downto 0);
       portb_out : out std_logic_vector(7 downto 0);
 
-      last_scan_code : out unsigned(11 downto 0);
-
-      ---------------------------------------------------------------------------
-      -- Fastio interface to recent keyboard scan codes
-      ---------------------------------------------------------------------------    
-      fastio_address : in std_logic_vector(19 downto 0);
-      fastio_write : in std_logic;
-      fastio_wdata : in std_logic_vector(7 downto 0);
-      fastio_rdata : out std_logic_vector(7 downto 0)
-
+      last_scan_code : out unsigned(11 downto 0)
       );
   end component;
 
@@ -252,13 +243,8 @@ begin
     ps2data        => ps2data,
     porta_in       => cia1porta_out,
     porta_out      => cia1porta_in,
-    portb_out      => cia1portb_in,
+    portb_out      => cia1portb_in
 --    last_scan_code => last_scan_code,
-
-    fastio_address => address,
-    fastio_write => w,
-    fastio_wdata => x"FF",
-    std_logic_vector(fastio_rdata) => data_o
     );
 
   sdcard0 : sdcardio port map (
