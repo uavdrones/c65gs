@@ -109,7 +109,11 @@ begin
 				when CMD0 =>
 					cmd_out <= x"FF400000000095";
 					bit_counter := 55;
-					return_state <= CMD8;
+                                        if sdhc_mode='1' then
+                                          return_state <= CMD8;
+                                        else
+                                          return_state <= CMD55; -- CMD8;                                          
+                                        end if;
 					state <= SEND_CMD;
 
 				when CMD8 =>

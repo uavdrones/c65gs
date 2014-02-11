@@ -40,6 +40,7 @@ architecture behavioural of sdcardio is
         sclk : out std_logic;
 
         sector_number : in std_logic_vector(31 downto 0);  -- sector number requested
+        sdhc_mode : in std_logic;
         rd : in std_logic;
         wr : in std_logic;
         dm_in : in std_logic;   -- data mode, 0 = write continuously, 1 = write single block
@@ -66,6 +67,7 @@ architecture behavioural of sdcardio is
   signal sd_error        : std_logic;
   signal sd_errorcode    : std_logic_vector(15 downto 0);
   signal sd_reset        : std_logic := '1';
+  signal sdhc_mode : std_logic := '0';
   
   -- IO mapped register to indicate if SD card interface is busy
   signal sdio_busy : std_logic := '0';
@@ -108,6 +110,7 @@ begin  -- behavioural
 	sclk => sclk_o,
 
         sector_number => sd_sector,
+        sdhc_mode => sdhc_mode,
 	rd =>  sd_doread,
 	wr =>  sd_dowrite,
 	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
@@ -225,6 +228,8 @@ begin  -- behavioural
                       sdio_error <= '0';
                       sdio_fsm_error <= '0';
                     end if;
+                  when x"41" => sdhc_mode <= '1';
+                  when x"42" => sdhc_mode <= '0';
                   when x"81" => sector_buffer_mapped<='1';
                                 sdio_error <= '0';
                                 sdio_fsm_error <= '0';
