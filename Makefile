@@ -33,7 +33,7 @@ hesmonc000.vhdl:	rom_template.vhdl hesmonc000.bin makerom
 	./makerom rom_template.vhdl hesmonc000.bin hesmonc000
 
 transfer:
-	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
+	scp -pr Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl xess 192.168.56.101:c64accel/
 
 
 simulate:	bcdadder.vhdl alu6502.vhdl cpu6502.vhdl kernel65.vhdl kernel64.vhdl basic64.vhdl iomapper.vhdl container.vhd cpu_test.vhdl vga.vhd simple6502.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl hesmonc000.vhdl ghdl_ram64x16k.vhdl
