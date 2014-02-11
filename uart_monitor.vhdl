@@ -622,6 +622,13 @@ begin
                 parse_position <= 2;
                 report "trying to parse hex" severity note;
                 parse_hex(ShowMemory1);
+                if cmdbuffer(1)='m' then
+                  -- m prints one line
+                  line_number <= 31;
+                else
+                  -- M prints 32 lines
+                  line_number <= 0;
+                end if;
               else
                 errorCode <= x"06";
                 state <= SyntaxError;
@@ -718,7 +725,6 @@ begin
             -- XXX Need to actually read memory from the CPU
             target_address <= hex_value(27 downto 0);
             byte_number <= 0;
-            line_number <= 0;
             end_of_command(ShowMemory2);              
           when ShowMemory2 =>
             if byte_number=16 then
