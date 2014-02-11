@@ -39,10 +39,14 @@ architecture behavioural of sdcardio is
         miso : in std_logic;
         sclk : out std_logic;
 
+        sector_number : in std_logic_vector(31 downto 0);  -- sector number requested
         rd : in std_logic;
         wr : in std_logic;
         dm_in : in std_logic;   -- data mode, 0 = write continuously, 1 = write single block
         reset : in std_logic;
+        data_ready : out std_logic;     -- 1= data written, or data accepted,
+                                        -- 0= wait for data, or pre-load data
+                                        -- for writing
         din : in std_logic_vector(7 downto 0);
         dout : out std_logic_vector(7 downto 0);
         clk : in std_logic      -- twice the SPI clk
@@ -51,8 +55,7 @@ architecture behavioural of sdcardio is
     
   signal sd_doread       : std_logic := '0';
   signal sd_dowrite      : std_logic := '0';
-  signal hndShk_is       : std_logic := '0';
-  signal hndShk_os       : std_logic;
+  signal data_ready : std_logic := '0';
   
   signal sd_sector       : std_logic_vector(31 downto 0) := (others => '0');
   signal sd_rdata        : std_logic_vector(7 downto 0);
@@ -102,10 +105,12 @@ begin  -- behavioural
 	miso => miso_i,
 	sclk => sclk_o,
 
+        sector_number => sd_sector,
 	rd =>  sd_doread,
 	wr =>  sd_dowrite,
 	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
 	reset => sd_reset,
+        data_ready => data_ready,
 	din => sd_wdata,
 	dout => sd_rdata,
 	clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
@@ -383,7 +388,7 @@ begin  -- behavioural
               sd_doread <= '0';
             end if;
           when ReadingSector =>
-            if hndShk_os='1' then
+            if data_ready='1' then
               sd_doread <= '0';
               -- A byte is ready to read, so store it
               -- XXX DOES contribute to ISE thinking that sector_buffer() is
@@ -391,15 +396,12 @@ begin  -- behavioural
               if fastio_read='0' and fastio_write='0' then
                 sector_buffer(to_integer(sector_offset)) <= unsigned(sd_rdata);
               end if;
-              -- Tell controller that we have latched it
-              hndShk_is <= '1';
               sd_state <= ReadingSectorAckByte;
               sector_offset <= sector_offset + 1;
             end if;
           when ReadingSectorAckByte =>
             -- Wait until controller acknowledges that we have acked it
-            if hndShk_os='0' then
-              hndShk_is <= '0';
+            if data_ready='0' then
               if sector_offset = "000000000" then
                 -- sector offset has wrapped back to zero, so we must have
                 -- read the whole sector.
@@ -416,27 +418,21 @@ begin  -- behavioural
               sdio_busy <= '1';
               sd_state <= WritingSector;
               sector_offset <= (others => '0');
+              sd_wdata <= std_logic_vector(sector_buffer(0));
             else
               sd_dowrite <= '0';
             end if;
           when WritingSector =>
-            if hndShk_os='1' then
+            if data_ready='1' then
               sd_dowrite <= '0';
-              -- A byte is ready to read, so store it
-              -- XXX DOES contribute to ISE thinking sector_buffer is dual port
-              -- Commenting out the read from sector_buffer here fixes the problem.
-              if fastio_read='0' and fastio_write='0' then
-                sd_wdata <= std_logic_vector(sector_buffer(to_integer(sector_offset)));
-              end if;
-              -- Tell controller that we have latched it
-              hndShk_is <= '1';
+              -- Byte has been accepted, write next one
+              sd_wdata <= std_logic_vector(sector_buffer(to_integer(sector_offset+1)));
               sd_state <= WritingSectorAckByte;
               sector_offset <= sector_offset + 1;
             end if;
           when WritingSectorAckByte =>
             -- Wait until controller acknowledges that we have acked it
-            if hndShk_os='0' then
-              hndShk_is <= '0';
+            if data_ready='0' then
               if sector_offset = "000000000" then
                 -- sector offset has wrapped back to zero, so we must have
                 -- read the whole sector.

@@ -19,7 +19,11 @@ port (
 	rd : in std_logic;
 	wr : in std_logic;
 	dm_in : in std_logic;	-- data mode, 0 = write continuously, 1 = write single block
+        sector_number : in std_logic_vector(31 downto 0);  -- sector number requested
 	reset : in std_logic;
+        data_ready : out std_logic;     -- 1= data written, or data accepted,
+                                        -- 0= wait for data, or pre-load data
+                                        -- for writing
 	din : in std_logic_vector(7 downto 0);
 	dout : out std_logic_vector(7 downto 0);
 	clk : in std_logic	-- twice the SPI clk
@@ -129,8 +133,10 @@ begin
 				when IDLE => 
 					if (rd = '1') then
 						state <= READ_BLOCK;
+                                                address <= sector_number;
 					elsif (wr='1') then
 						state <= WRITE_BLOCK_CMD;
+                                                address <= sector_number;
 					else
 						state <= IDLE;
 					end if;
@@ -152,6 +158,7 @@ begin
 					sclk_sig <= not sclk_sig;
 
 				when READ_BLOCK_DATA =>
+                                        data_ready <= '0';                                                
 					if (byte_counter = 0) then
 						bit_counter := 7;
 						return_state <= READ_BLOCK_CRC;
@@ -173,6 +180,7 @@ begin
 					if (sclk_sig = '1') then
 						if (bit_counter = 0) then
 							state <= RECEIVE_BYTE_WAIT;
+                                                        data_ready <= '0';
 						else
 							bit_counter := bit_counter - 1;
 							cmd_out <= cmd_out(54 downto 0) & '1';
@@ -200,8 +208,10 @@ begin
 						if (bit_counter = 0) then
 							state <= return_state;
 							dout <= recv_data(6 downto 0) & miso;
+                                                        data_ready <= '1';
 						else
 							bit_counter := bit_counter - 1;
+                                                        data_ready <= '0';
 						end if;
 					end if;
 					sclk_sig <= not sclk_sig;
@@ -221,7 +231,7 @@ begin
 					cmd_mode <= '0';
 					byte_counter := WRITE_DATA_SIZE; 
 					state <= WRITE_BLOCK_DATA;
-					
+                                        data_ready <= '0';					
 				when WRITE_BLOCK_DATA => 
 					if byte_counter = 0 then
 						state <= RECEIVE_BYTE_WAIT;
@@ -238,14 +248,16 @@ begin
 							end if;
 						else
 							-- just a counter, get real data here
-							data_sig <= std_logic_vector(to_unsigned(byte_counter,8));
+							data_sig <= din;
+                                                        data_ready <= '1';
 						end if;
 						bit_counter := 7;
 						state <= WRITE_BLOCK_BYTE;
 						byte_counter := byte_counter - 1;
 					end if;
 				
-				when WRITE_BLOCK_BYTE => 
+				when WRITE_BLOCK_BYTE =>
+                                        data_ready <= '0';
 					if (sclk_sig = '1') then
 						if bit_counter=0 then
 							state <= WRITE_BLOCK_DATA;
