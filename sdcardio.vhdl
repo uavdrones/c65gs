@@ -59,7 +59,7 @@ architecture behavioural of sdcardio is
   signal data_ready : std_logic := '0';
   
   signal sd_sector       : std_logic_vector(31 downto 0) := (others => '0');
-  signal sd_datatoken    : std_logic_vector(7 downto 0);
+  signal sd_datatoken    : unsigned(7 downto 0);
   signal sd_rdata        : std_logic_vector(7 downto 0);
   signal sd_wdata        : std_logic_vector(7 downto 0) := (others => '0');
   signal sd_busy         : std_logic;   -- busy line from SD card itself
