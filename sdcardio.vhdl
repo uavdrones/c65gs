@@ -423,7 +423,7 @@ begin  -- behavioural
           when ReadingSectorAckByte =>
             -- Wait until controller acknowledges that we have acked it
             if data_ready='0' then
-              if sector_offset = "000000000" then
+              if (sector_offset = "000000000") and (skip=0) then
                 -- sector offset has wrapped back to zero, so we must have
                 -- read the whole sector.
                 sd_state <= DoneReadingSector;
