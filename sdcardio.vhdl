@@ -59,6 +59,7 @@ architecture behavioural of sdcardio is
   signal data_ready : std_logic := '0';
   
   signal sd_sector       : std_logic_vector(31 downto 0) := (others => '0');
+  signal sd_datatoken    : std_logic_vector(7 downto 0);
   signal sd_rdata        : std_logic_vector(7 downto 0);
   signal sd_wdata        : std_logic_vector(7 downto 0) := (others => '0');
   signal sd_busy         : std_logic;   -- busy line from SD card itself
@@ -369,9 +370,7 @@ begin  -- behavioural
             when x"5" => fastio_rdata <= unsigned(sd_errorcode(7 downto 0));        
             when x"6" => fastio_rdata <= unsigned(sd_errorcode(15 downto 8));
             when x"7" => fastio_rdata <= to_unsigned(sd_state_t'pos(sd_state),8);
-            when x"8" =>
-              fastio_rdata(7 downto 1) <= (others => '1');
-              fastio_rdata(0) <= '0';
+            when x"8" => fastio_rdata <= sd_datatoken;
             when others => fastio_rdata <= (others => 'Z');
           end case;
         elsif (sector_buffer_mapped='1') and 
@@ -416,6 +415,9 @@ begin  -- behavioural
                 sector_offset <= sector_offset + 1;
               else
                 skip <= skip - 1;
+                if skip=2 then
+                  sd_datatoken <= unsigned(sd_rdata);
+                end if;
               end if;
             end if;
           when ReadingSectorAckByte =>
