@@ -559,7 +559,7 @@ begin
     monitor_mem_trace_mode => monitor_mem_trace_mode,
     monitor_mem_stage_trace_mode => monitor_mem_stage_trace_mode,
     monitor_mem_trace_toggle => monitor_mem_trace_toggle
-    );
+  );
   
 end Behavioral;
 
