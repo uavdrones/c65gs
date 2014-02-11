@@ -16,6 +16,7 @@ port (
 	miso : in std_logic;
 	sclk : out std_logic;
 
+        sdhc_mode : in std_logic;
 	rd : in std_logic;
 	wr : in std_logic;
 	dm_in : in std_logic;	-- data mode, 0 = write continuously, 1 = write single block
