@@ -55,6 +55,7 @@ architecture behavioural of sdcardio is
   end component;
 
   signal skip : integer range 0 to 2;
+  signal read_bytes : std_logic;
   signal sd_doread       : std_logic := '0';
   signal sd_dowrite      : std_logic := '0';
   signal data_ready : std_logic := '0';
@@ -249,7 +250,6 @@ begin  -- behavioural
             ((fastio_addr(19 downto 9)&'0' = x"D1E")
              or (fastio_addr(19 downto 9)&'0' = x"D3E")) then
             -- Map sector buffer at $DE00-$DFFF when required
-            -- XXX DOES contribute to ISE thinking that sector_buffer is dual port.
             if fastio_read='0' and fastio_write='1' then
               sector_buffer(to_integer(fastio_addr(8 downto 0))) <= fastio_wdata;
             end if;
@@ -376,14 +376,17 @@ begin  -- behavioural
             when x"6" => fastio_rdata <= unsigned(sd_errorcode(15 downto 8));
             when x"7" => fastio_rdata <= to_unsigned(sd_state_t'pos(sd_state),8);
             when x"8" => fastio_rdata <= sd_datatoken;
-            when x"9" => fastio_rdata <= unsigned(sd_rdata);
+            when x"9" => fastio_rdata <= unsigned(sd_rdata);                         
+            when x"a" => fastio_rdata <= sector_offset(7 downto 0);
+            when x"b" =>
+              fastio_rdata(7 downto 1) <= (others => '0');
+              fastio_rdata(0) <= sector_offset(8);
             when others => fastio_rdata <= (others => 'Z');
           end case;
         elsif (sector_buffer_mapped='1') and 
           ((fastio_addr(19 downto 9)&'0' = x"D1E")
            or (fastio_addr(19 downto 9)&'0' = x"D3E")) then
           -- Map sector buffer at $DE00-$DFFF when required
-          -- XXX - Doesn't contribute to ISE thinking sector_buffer is dual-port
           if fastio_read='1' and fastio_write='0' then
             fastio_rdata <= sector_buffer(to_integer(fastio_addr(8 downto 0)));
           end if;
@@ -404,6 +407,7 @@ begin  -- behavioural
               sdio_busy <= '1';
               skip <= 2;
               sector_offset <= (others => '0');
+              read_bytes <= '0';
             else
               sd_doread <= '0';
             end if;
@@ -411,14 +415,13 @@ begin  -- behavioural
             if data_ready='1' then
               sd_doread <= '0';
               -- A byte is ready to read, so store it
-              -- XXX DOES contribute to ISE thinking that sector_buffer() is
-              -- dual port
               if fastio_read='0' and fastio_write='0' then
                 sector_buffer(to_integer(sector_offset)) <= unsigned(sd_rdata);
               end if;
-              sd_state <= ReadingSectorAckByte;              
+              sd_state <= ReadingSectorAckByte;
               if skip=0 then
                 sector_offset <= sector_offset + 1;
+                read_bytes <= '1';
               else
                 skip <= skip - 1;
                 if skip=2 then
@@ -429,7 +432,7 @@ begin  -- behavioural
           when ReadingSectorAckByte =>
             -- Wait until controller acknowledges that we have acked it
             if data_ready='0' then
-              if (sector_offset = "000000000") and (skip=0) then
+              if (sector_offset = "000000000") and (read_bytes='1') then
                 -- sector offset has wrapped back to zero, so we must have
                 -- read the whole sector.
                 sd_state <= DoneReadingSector;
