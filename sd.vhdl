@@ -119,7 +119,7 @@ begin
 				
 				when CMD41 =>
                                         -- Allow setting flags during CMD41
-					cmd_out <= x"FF69" & address & "01";	-- 41d OR 40h = 69h
+					cmd_out <= x"FF69" & address & x"01";	-- 41d OR 40h = 69h
 					bit_counter := 55;
 					return_state <= POLL_CMD;
 					state <= SEND_CMD;
