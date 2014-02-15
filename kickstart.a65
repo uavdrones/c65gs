@@ -39,6 +39,7 @@
 	.space fs_datasectors 4
 	.space fs_clustercount 4
 	.space fs_sectorspercluster 1
+	.space fs_sector_in_cluster 1
 	.space fs_clusternumber 4
 
 	.text
@@ -346,9 +347,24 @@ l16:		lda $DE2C,x
 		jsr readsector
 		bcc sdcarderror
 
+		; We are searching from the first sector of the cluster
+		lda #$00
+		sta fs_sector_in_cluster
+
 		; iterate through directory entries looking for ordinary file 
 		; C65GS.ROM
+searchdirectorysector:
 		ldz #$00
+
+		ldy #$00
+l29:		lda $DE00,y
+		cmp #$40
+		bcc l30
+		and #$1f
+l30:		sta $0608,y
+		iny
+		bne l29
+
 l19b:		inc $0425
 		ldy #$00
 l18b:		inc $0427
@@ -369,8 +385,8 @@ l17b:		lda $DE00,y
 		cpx #$0b
 		bne l17b
 		; this is the entry
-l29:		inc $d020
-		jmp l29		
+		inc $d020
+		jmp foundromfile
 
 notthisentry:   ; see if there are more entries in this page		
 		tya
@@ -396,6 +412,28 @@ l20b:		lda $DF00,y
 		bra l19b 
 
 trynextsector:
+		; was not in that sector.
+		; bump sector number
+		lda fs_sector_in_cluster
+		; XXX work around missing INC accumulator mode
+		clc
+		adc #$01
+		sta fs_sector_in_cluster
+		sta $0422
+		cmp fs_sectorspercluster
+		beq trynextcluster
+		jsr sd_inc_fixedsectornumber
+		inc $0423
+		jmp searchdirectorysector
+		
+trynextcluster:
+		jmp infinity
+
+foundromfile:
+		; MILESTONE: Have file system properties.
+		lda #$3e           ; ">" character
+		sta $07c3          ; $0400+(24*40)+3
+
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
@@ -550,6 +588,29 @@ printsdaddress:
 		jsr printhex
 		ldz $D681
 		jmp printhex
+
+sd_inc_fixedsectornumber:
+		; increment fixed sector number.
+		; if SDHC, then increment is simple.
+		; if SD, then we add $200
+		lda $D680
+		and #$10
+		bne sdhc1
+		; sd card mode: add $200
+		lda $d682
+		clc
+		adc #$02
+		sta $d682
+		bra s2
+sdhc1:		; SDHC card mode: add 1
+		inc $d681
+		bcc s1
+		inc $d682
+		bcc s1
+s2:		inc $d683
+		bcc s1
+		inc $d684
+s1:		rts
 
 sd_fix_sectornumber:
 		; assumes sector number has been loaded into 
