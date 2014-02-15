@@ -43,17 +43,17 @@
 
 	.text
 
-;     	    .org $E000
+     	    .org $E000
 
-	 .word $0801
-	 .org $0801
-
-	 .word _next, 10                       ; Next line and current line number
-	 .byte $97, "2,0:", $9e, " 2014", $AA, "65",0      ; POKE 2,0 : SYS 2014+65
-_next:	 .word 0
-
-	 .checkpc 2079
-	 .advance 2079
+;	 .word $0801
+;	 .org $0801
+;
+;	 .word _next, 10                       ; Next line and current line number
+;	 .byte $97, "2,0:", $9e, " 2014", $AA, "65",0      ; POKE 2,0 : SYS 2014+65
+;_next:	 .word 0
+;
+;	 .checkpc 2079
+;	 .advance 2079
 
 
 reset_entry:
@@ -861,6 +861,8 @@ resetdisplay:
 		sta $D011
 		lda #$C8
 		sta $D016
+		lda #$14
+		sta $D018
 		; point VIC-IV to bottom 16KB of display memory
 		lda #$ff
 		sta $DD01
@@ -1054,7 +1056,7 @@ irq_entry:	pha
 
 ; 6502 interrupt and reset vectors
        		.checkpc $FFFA
-;		.advance $FFFA
+		.advance $FFFA
 nmi_vector:	.word nmi_entry
 reset_vector:	.word reset_entry
 irq_vector:	.word irq_entry
