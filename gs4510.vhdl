@@ -516,8 +516,11 @@ begin
       fastram_byte_number <= long_address(2 downto 0);
       pending_state <= next_state;
       state <= WaitOneCycle;
-      -- No wait states in fastram system, so proceed directly to next state
-    elsif long_address(27 downto 24) = x"8" then
+    elsif long_address(27 downto 24) = x"8"
+          -- Slow RAM also maps to $20000-$3FFFF as ROM (so only for reading)
+          or long_address(27 downto 20) = x"02"
+          or long_address(27 downto 20) = x"03"
+    then
       accessing_slowram <= '1';
       slowram_addr <= std_logic_vector(long_address(23 downto 1));
       slowram_data <= (others => 'Z');  -- tristate data lines
