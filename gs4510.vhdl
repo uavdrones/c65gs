@@ -424,7 +424,9 @@ begin
     
     -- IO
     if (blocknum=13) and ((lhc(0)='1') or (lhc(1)='1')) and (lhc(2)='1') then
-      temp_address(27 downto 12) := x"FFD" & "00" & viciii_io_mode;
+      temp_address(27 downto 12) := x"FFD0";
+      -- Which IO page is based on what has been written to $D02F
+      temp_address(13 downto 12) := unsigned(viciii_io_mode);
       temp_addresS(11 downto 0) := short_address(11 downto 0);
     end if;
     -- CHARROM

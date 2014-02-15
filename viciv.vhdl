@@ -145,6 +145,8 @@ architecture Behavioral of viciv is
       );
   END component;
 
+  signal viciii_d02f_state : integer range 0 to 2 := 0;
+  
   -- Drive stage for IRQ signal in attempt to allieviate timing problems.
   signal irq_drive : std_logic;
   
