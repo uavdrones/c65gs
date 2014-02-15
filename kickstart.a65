@@ -26,6 +26,7 @@
 	.space romslab 1
 	.space checksum 4
 	.space timerticks 1
+	.space timerlimit 1
 	.text
 
 ;     	    .org $E000
@@ -76,9 +77,22 @@ tryreadmbr:
 		jmp tryreadmbr
 		
 gotmbr:
-		; got boot loader
+		; got master boot record
 		lda #$3e           ; ">" character
 		sta $07c0          ; $0400+(24*40)
+
+		; map sector buffer
+		lda #$81
+		sta $d680
+
+		; copy boot sector to screen for debugging
+		ldx #$00
+l5:		lda $de00,x
+		sta $0500,x
+		lda $df00,x
+		sta $0600,x
+		inx
+		bne l5
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
@@ -131,13 +145,27 @@ readsector:
 		sta $d680
 
 		; wait for sector to be read
-rs3:		inc $0425
+		jsr resetsdtimeout
+		lda #$04
+		sta timerlimit
+rs3:		jsr checksdtimeout
+		bcc doreadsector
+		inc $0425
 		lda $d680
 		and #$01
 		bne rs3
 
+		jsr canceltimer
 		sec
 		rts
+
+		; reset sd card and try again
+doreadsector:   jsr resetsd
+		jsr resetsdtimeout
+		lda $d680
+		sta $0401
+		jmp rs3
+
 
 rsbusyfail:     ; fail
 		inc $0426
@@ -164,11 +192,15 @@ resetsd:
 
 sdresetsequence:
 		jsr resetsdtimeout
+		lda #60
+		sta timerlimit
 		lda #$00
 		sta $d680		
 rs1:            
 		jsr checksdtimeout
 		bcc sdresettimedout
+		lda #120
+		sta timerlimit
 		lda $d680
 		and #$01
 		bne rs1
@@ -223,6 +255,11 @@ resetsdtimeout:
 	lda #$00
 	sta timerticks
 
+	lda #<sdtimerirq
+	sta $0314
+	lda #>sdtimerirq
+	sta $0315
+
 	cli
 
 	sec
@@ -230,9 +267,15 @@ resetsdtimeout:
 
 checksdtimeout:
 	; time out after ~2 seconds
-	lda #120  
+	lda timerlimit 
 	cmp timerticks       
 	rts
+
+sdtimerirq:
+	lda $dc0d
+	inc $d020
+	inc timerticks
+	jmp $ea81
 
 ;;; ----------------------------------------------------------------------------
 ;;; ROM loading and manipulation routines
