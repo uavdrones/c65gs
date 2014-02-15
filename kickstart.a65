@@ -113,6 +113,13 @@ gotmbr:
 		lda #$81
 		sta $d680
 
+		lda $DFFE
+		cmp #$55
+		bne badfs
+		lda $DFFF
+		cmp #$AA
+		bne badfs
+
 		; read partition 1 details from $DFBE
 		; $DFBE - $80 = bootable, $00 = inactive.  We ignore this
 		; $DFC2 - Partition type
@@ -159,11 +166,18 @@ l9:		lda part_startsector,x
 		lda #$3e           ; ">" character
 		sta $07c1          ; $0400+(24*40)+1
 	
+		lda $DFFE
+		cmp #$55
+		bne badfs
+		lda $DFFF
+		cmp #$AA
+		bne badfs
+
 		; report file system info
 		ldx #<msg_fsdetails
 		ldy #>msg_fsdetails
-		jsr printmessage
-		
+		jsr printmessage			
+
 		; sectors per cluster
 		ldy #$00
 		ldz $DE0D
@@ -193,6 +207,10 @@ sdcarderror:	ldx #<msg_sdcarderror
 		jsr printmessage
 		jmp infinity
 
+badfs:		ldx #<msg_badformat
+		ldy #>msg_badformat
+		jsr printmessage
+		jmp infinity
 ;;; ----------------------------------------------------------------------------
 ;;; FAT file system routines
 ;;; ----------------------------------------------------------------------------
@@ -751,6 +769,7 @@ msg_romok:            .byte "ROM CHECKSUM OK - BOOTING               "
 msg_rombad:	      .byte "ROM CHECKSUM FAIL - LOADING ROM         "
 msg_tryingsdcard:     .byte "LOOKING FOR SDCARD...                   "
 msg_sdcarderror:      .byte "ERROR READING FROM SD CARD              "
+msg_badformat:	      .byte "BAD MBR OR DOS BOOT SECTOR.             "
 msg_sdcardfound:      .byte "READ PARTITION TABLE FROM SDCARD        "
 msg_partitiondetails: .byte "PARTITION 1($$) @$$$$$$$$, SIZE $$$$$$$$"
 msg_fsdetails: 	      .byte "FS SPC:$$ RSVSEC:$$$$ RSVCLUS:$$$$$$$$  "
