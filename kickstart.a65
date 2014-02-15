@@ -6,7 +6,7 @@
 ; 1. If checksum fails, load complete ROM from SD card.
 ; 2. Select default disk image for F011 emulation.
 ;
-; The kickstart ROM is 8KB in length, and maps at $E000-$FFF
+; The kickstart ROM is 8KB in length, and maps at $E000-$FFFF
 ; essentially the same as the C64 kernel.
 ;
 ; Kickstart modifies RAM from $0000-$07FF (ZP, stack, 40-column
@@ -45,15 +45,15 @@
 
      	    .org $E000
 
-;	 .word $0801
-;	 .org $0801
-;
-;	 .word _next, 10                       ; Next line and current line number
-;	 .byte $97, "2,0:", $9e, " 2014", $AA, "65",0      ; POKE 2,0 : SYS 2014+65
-;_next:	 .word 0
-;
-;	 .checkpc 2079
-;	 .advance 2079
+	 .word $0801
+	 .org $0801
+
+	 .word _next, 10                       ; Next line and current line number
+	 .byte $97, "2,0:", $9e, " 2014", $AA, "65",0      ; POKE 2,0 : SYS 2014+65
+_next:	 .word 0
+
+	 .checkpc 2079
+	 .advance 2079
 
 
 reset_entry:
@@ -345,12 +345,57 @@ l16:		lda $DE2C,x
 		jsr sd_fix_sectornumber
 		jsr readsector
 		bcc sdcarderror
+
+		; iterate through directory entries looking for ordinary file 
+		; C65GS.ROM
+		ldz #$00
+l19b:		inc $0425
+		ldy #$00
+l18b:		inc $0427
+		tya
+		lsr
+		lsr
+		lsr
+		lsr
+		lsr
+		sta $0426
 		ldx #$00
-l99:		lda $DE00,x
-		and #$1f
-		sta $0608,x
+l17b:		lda $DE00,y
+		jsr toupper
+		cmp txt_c65gsrom,y
+		bne notthisentry
+		iny
 		inx
-		bne l99
+		cpx #$0b
+		bne l17b
+		; this is the entry
+l29:		inc $d020
+		jmp l29		
+
+notthisentry:   ; see if there are more entries in this page		
+		tya
+		and #$e0
+		clc
+		adc #$20
+		tay
+		cpy #$00
+		bne l18b
+		; no more entries in this page.  See if we have the upper half
+		; of the sector to search
+		tza
+		bne trynextsector
+		; copy upper half of sector down and search that
+		ldy #$00
+l20b:		lda $DF00,y
+		sta $DE00,y
+		iny
+		bne l20b
+		ldz #$01 ; remember we have looked at this half
+		inc $0424
+		; now search the upper half
+		bra l19b 
+
+trynextsector:
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
@@ -368,6 +413,14 @@ badfs:		ldx #<msg_badformat
 ;;; ----------------------------------------------------------------------------
 ;;; FAT file system routines
 ;;; ----------------------------------------------------------------------------
+toupper:	; convert ASCII character to upper case
+		cmp #$60
+		bcc tu1
+		cmp #$7a
+		bcs tu1
+		and #$5f
+tu1:		rts
+
 fs_clustertosector:
 	; convert a cluster number in fs_clustertosector into a sector 
 	; number loaded into $D681-$D684.
@@ -750,7 +803,7 @@ calcromsum:	; calculate checksum of 128KB ROM
 		; slabs at $4000-$7FFF.  Check sum each, and
 		; then compare checksum to ROM load record.
 		; ROMs get loaded into slow RAM at $8020000-$803FFFF,
-		; which is shadowed using C65 MAP instruction to
+		; which is shadowed for reading using C65 MAP instruction to
 		; C65 address space $20000-$3FFFF.
 		; Checksum and ROM load record are stored in
 		; $8000000 - $800FFFF, i.e., the first 64KB of
@@ -1039,6 +1092,9 @@ msg_reservedsectors:  .byte " SYS:$$$$$$$$ DAT:$$$$$$$$ CLUS:$$$$$$$$"
 msg_sectornumber:     .byte " CLUSTER:$$$$$$$$ -> SECTOR:$$$$$$$$    "
 msg_sdaddress:	      .byte " D684-D681=$$$$$$$$                     "
 
+; filename of ROM we want to load in FAT directory format
+txt_c65gsrom:	      .byte "C65GS   ROM"
+
 ;;; ----------------------------------------------------------------------------
 ;;; CPU entry vectors
 ;;; ----------------------------------------------------------------------------
@@ -1056,7 +1112,7 @@ irq_entry:	pha
 
 ; 6502 interrupt and reset vectors
        		.checkpc $FFFA
-		.advance $FFFA
+;		.advance $FFFA
 nmi_vector:	.word nmi_entry
 reset_vector:	.word reset_entry
 irq_vector:	.word irq_entry
