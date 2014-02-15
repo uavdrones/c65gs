@@ -29,6 +29,9 @@
 	.space timerticks 1
 	.space timerlimit 1
 	.space screenrow 1
+	.space part_startsector 4
+	.space fs_startfat 4
+	.space fs_startrootdir 4
 	.text
 
 ;     	    .org $E000
@@ -96,17 +99,11 @@ tryreadmbr:
 		jsr readmbr
 		bcs gotmbr
 
-		ldx #$00
-t1:		lda $df00,x
-		sta $0500,x
-		inx
-		bne t1
-
 		jmp tryreadmbr
 		
 gotmbr:
 		ldx #<msg_sdcardfound
-		ldy #<msg_sdcardfound
+		ldy #>msg_sdcardfound
 		jsr printmessage
 		; got master boot record
 		lda #$3e           ; ">" character
@@ -116,17 +113,84 @@ gotmbr:
 		lda #$81
 		sta $d680
 
-		; copy boot sector to screen for debugging
-		ldx #$00
-l5:		lda $de00,x
-		sta $0500,x
-		lda $df00,x
-		sta $0600,x
-		inx
-		bne l5
+		; read partition 1 details from $DFBE
+		; $DFBE - $80 = bootable, $00 = inactive.  We ignore this
+		; $DFC2 - Partition type
+		; $DFC6 - Starting SECTOR number
+		; $DFCA - Number of sectors in partition
+		ldx #<msg_partitiondetails
+		ldy #>msg_partitiondetails
+		jsr printmessage
+		; overwrite $ chars in template with hex digits
+		ldy #$00
+		ldz $DFC2
+		jsr printhex
+		ldz $DFC9
+		stz part_startsector+3
+		jsr printhex
+		ldz $DFC8
+		stz part_startsector+2
+		jsr printhex
+		ldz $DFC7
+		stz part_startsector+1
+		jsr printhex
+		ldz $DFC6
+		stz part_startsector+0
+		jsr printhex
+		ldz $DFCD
+		jsr printhex
+		ldz $DFCC
+		jsr printhex
+		ldz $DFCB
+		jsr printhex
+		ldz $DFCA
+		jsr printhex
+
+		; load start sector of partition into SD card sector register
+		ldx #$03
+l9:		lda part_startsector,x
+		sta $D681,x
+		dex
+		bpl l9
+		jsr sd_fix_sectornumber
+		jsr readsector
+		bcc sdcarderror		
+
+		lda #$3e           ; ">" character
+		sta $07c1          ; $0400+(24*40)+1
+	
+		; report file system info
+		ldx #<msg_fsdetails
+		ldy #>msg_fsdetails
+		jsr printmessage
+		
+		; sectors per cluster
+		ldy #$00
+		ldz $DE0D
+		jsr printhex
+		; reserved sectors
+		ldz $DE0F
+		jsr printhex
+		ldz $DE0E
+		jsr printhex
+		; first cluster
+		ldz $DE00+47
+		jsr printhex
+		ldz $DE00+46
+		jsr printhex
+		ldz $DE00+45
+		jsr printhex
+		ldz $DE00+44
+		jsr printhex
+
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
+		jmp infinity
+
+sdcarderror:	ldx #<msg_sdcarderror
+		ldy #>msg_sdcarderror
+		jsr printmessage
 		jmp infinity
 
 ;;; ----------------------------------------------------------------------------
@@ -151,30 +215,62 @@ l7:		lda #$00
 		sta $d683
 		sta $d684
 
-		inc $0427
-
 		jmp readsector
 
 ;;; ----------------------------------------------------------------------------
 ;;; SD Card access routines
 ;;; ----------------------------------------------------------------------------
-readsector:
+sd_fix_sectornumber:
 		; assumes sector number has been loaded into 
 		; $D681 - $D684
 		; We need to check if the card is SDHC or SD.
 		; If SD, we need to shift sector number left 9 bits,
 		; as SD cards address by byte, not sector.
+		; If card is SD, then shift it all left nine bits
+		; We detect SD versus SDHC by reading whether SD controller is
+		; in SDHC or SD mode.
+		lda $D680
+		and #$10
+		beq sdcardmode
+		; SDHC mode, so nothing to do
+		rts
+sdcardmode:     
+		; shift left 8 bits first
+		lda $D683
+		sta $D684
+		lda $D682
+		sta $D683
+		lda $D681
+		sta $D682
+		lda #$00
+		sta $D681
+		; now shift it all left one bit
+		lda $D682
+		asl
+		sta $D682
+		lda $D683
+		rol
+		sta $D683
+		lda $D684
+		rol
+		sta $D684
+		rts
 
-		; XXX not implemented: failed
+readsector:
+		; Assumes fixed sector number (or byte address in case of SD cards)
+		; is loaded into $D681 - $D684		
 
 		; check if sd card is busy
 		lda $d680
 		and #$01
 		bne rsbusyfail
 
-redoread:	
-		; ask for sector to be read
+		; try reading sector fast the first time
+		jmp rs4
 
+redoread:	
+		; when retrying, introduce a delay.  This seems to be needed often
+		; when reading the first sector after SD card reset.  
 		ldx #$f0
 		ldy #$00
 		ldz #$00
@@ -184,7 +280,8 @@ r1:		inz
 		bne r1
 		inx
 		bne r1
-
+rs4:
+		; ask for sector to be read
 		lda #$02
 		sta $d680
 
@@ -199,6 +296,7 @@ rs3:		jsr checksdtimeout
 		bne rs3
 
 		; check that we read 512 bytes
+		lda $d689
 		cmp #$02
 		bne redoread
 
@@ -296,6 +394,7 @@ resetsdtimeout:
 	lda #$00
 	sta timerticks
 
+	; XXX only needed during testing 
 	lda #<sdtimerirq
 	sta $0314
 	lda #>sdtimerirq
@@ -312,6 +411,7 @@ checksdtimeout:
 	cmp timerticks       
 	rts
 
+; XXX only needed during testing
 sdtimerirq:
 	lda $dc0d
 	inc timerticks
@@ -559,6 +659,36 @@ pm4:		sta (zptempv2),y
 
 		rts
 
+printhex:	
+		; output contents of Z on last written screen line
+		tza
+		lsr
+		lsr
+		lsr
+		lsr
+		jsr printhexdigit		
+		tza
+		and #$0f
+printhexdigit:
+		; find next $ sign to replace with hex digit
+		tax
+phd3:		lda (zptempv2),y
+		cmp #$24
+		beq phd2
+		iny
+		cpy #$28
+		bne phd3
+		rts
+phd2:		txa
+
+		ora #$30
+		cmp #$39
+		bcc phd1
+		sbc #$39
+phd1:		sta (zptempv2),y
+		iny
+		rts
+
 ; Transfer control to C64 kernel.
 ; (This also allows entry to C65 mode, because the
 ;  C64-mode kernel on the C65 checks if C65 mode
@@ -620,16 +750,25 @@ msg_kickstart:        .byte "C65GS KICKSTART V00.00 PRE-ALPHA        "
 msg_romok:            .byte "ROM CHECKSUM OK - BOOTING               "
 msg_rombad:	      .byte "ROM CHECKSUM FAIL - LOADING ROM         "
 msg_tryingsdcard:     .byte "LOOKING FOR SDCARD...                   "
-msg_sdcardfound:      .byte "SD CARD FOUND                           "
-
+msg_sdcarderror:      .byte "ERROR READING FROM SD CARD              "
+msg_sdcardfound:      .byte "READ PARTITION TABLE FROM SDCARD        "
+msg_partitiondetails: .byte "PARTITION 1($$) @$$$$$$$$, SIZE $$$$$$$$"
+msg_fsdetails: 	      .byte "FS SPC:$$ RSVSEC:$$$$ RSVCLUS:$$$$$$$$  "
 
 ;;; ----------------------------------------------------------------------------
 ;;; CPU entry vectors
 ;;; ----------------------------------------------------------------------------
 		
-; For now we have no use for interrupts.
+; For now we have no use for NMI
 nmi_entry:	rti
-irq_entry:	rti
+; IRQ is used for SD card timeouts
+irq_entry:	pha
+		php
+		lda $DC0D
+		inc timerticks
+		plp
+		pla
+		rti
 
 ; 6502 interrupt and reset vectors
        		.checkpc $FFFA
