@@ -384,6 +384,17 @@ begin  -- behavioural
               fastio_rdata(7 downto 1) <= (others => '0');
               fastio_rdata(0) <= sector_offset(8);
               fastio_rdata(1) <= sector_offset(9);
+            when x"f" =>
+              -- status / command register
+              -- error status in bit 6 so that V flag can be used for check      
+              fastio_rdata(7) <= '0';
+              fastio_rdata(6) <= sdio_error;
+              fastio_rdata(5) <= sdio_fsm_error;
+              fastio_rdata(4) <= sdhc_mode;
+              fastio_rdata(3) <= sector_buffer_mapped;
+              fastio_rdata(2) <= sd_reset;
+              fastio_rdata(1) <= sdio_busy;
+              fastio_rdata(0) <= sdio_busy;
             when others => fastio_rdata <= (others => 'Z');
           end case;
         elsif (sector_buffer_mapped='1') and 

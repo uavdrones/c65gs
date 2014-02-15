@@ -92,7 +92,8 @@ entity gs4510 is
     fastio_rdata : inout std_logic_vector(7 downto 0);
     fastio_vic_rdata : in std_logic_vector(7 downto 0);
     fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
-
+    colour_ram_cs : out std_logic;
+    
     colourram_at_dc00 : in std_logic
     );
 end entity gs4510;
@@ -635,6 +636,23 @@ begin
     
     accessing_ram <= '0'; accessing_slowram <= '0';
     accessing_fastio <= '0'; accessing_cpuport <= '0';
+
+    if long_address(19 downto 16) = x"8" then
+      report "VIC 64KB colour RAM access from VIC fastio" severity note;
+      colour_ram_cs <= '1';
+    end if;
+    if long_address(19 downto 16) = x"D" then
+      if long_address(15 downto 14) = "00" then    --   $D{0,1,2,3}XXX
+        -- Colour RAM at $D800-$DBFF and optionally $DC00-$DFFF
+        if long_address(11)='1' then
+          if (long_address(10)='0') or (colourram_at_dc00='1') then
+            report "D800-DBFF/DC00-DFFF colour ram access from VIC fastio" severity note;
+            colour_ram_cs <= '1';
+          end if;
+        end if;
+      end if;                         -- $D{0,1,2,3}XXX
+    end if;                           -- $DXXXX
+    
     if long_address(27 downto 17)="00000000000" then
       accessing_ram <= '1';
       fastram_address <= std_logic_vector(long_address(16 downto 3));
@@ -1338,6 +1356,8 @@ begin
     -- BEGINNING OF MAIN PROCESS FOR CPU
     if rising_edge(clock) then
 
+      colour_ram_cs <= '0';
+      
       monitor_state <= std_logic_vector(to_unsigned(processor_state'pos(state),8));
       monitor_pc <= std_logic_vector(reg_pc);
       monitor_a <= std_logic_vector(reg_a);
