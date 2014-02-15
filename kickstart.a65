@@ -139,8 +139,19 @@ readsector:
 		and #$01
 		bne rsbusyfail
 
-		inc $0424
+redoread:	inc $0424
 		; ask for sector to be read
+
+		ldx #$f0
+		ldy #$00
+		ldz #$00
+r1:		inz
+		bne r1
+		iny
+		bne r1
+		inx
+		bne r1
+
 		lda #$02
 		sta $d680
 
@@ -149,18 +160,26 @@ readsector:
 		lda #$04
 		sta timerlimit
 rs3:		jsr checksdtimeout
-		bcc doreadsector
+		bcc rereadsector
 		inc $0425
 		lda $d680
 		and #$01
 		bne rs3
+
+		; check that we read 512 bytes
+		lda $d688
+		sta $0404
+		lda $d689
+		sta $0405
+		cmp #$02
+		bne redoread
 
 		jsr canceltimer
 		sec
 		rts
 
 		; reset sd card and try again
-doreadsector:   jsr resetsd
+rereadsector:   jsr resetsd
 		jsr resetsdtimeout
 		lda $d680
 		sta $0401
