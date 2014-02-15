@@ -36,7 +36,7 @@ entity iomapper is
 end iomapper;
 
 architecture behavioral of iomapper is
-  component kernel65 is
+  component kickstart is
     port (
       Clk : in std_logic;
       address : in std_logic_vector(12 downto 0);
@@ -141,7 +141,7 @@ architecture behavioral of iomapper is
   end component;
 
 
-  signal kernel65cs : std_logic;
+  signal kickstartcs : std_logic;
   signal kernel64cs : std_logic;
   signal basic64cs : std_logic;
 
@@ -158,11 +158,11 @@ architecture behavioral of iomapper is
   signal cia1portb_in : std_logic_vector(7 downto 0);
   
 begin         
-  kernel65rom : kernel65 port map (
+  kickstartrom : kickstart port map (
     clk     => clk,
     address => address(12 downto 0),
     we      => w,
-    cs      => kernel65cs,
+    cs      => kickstartcs,
     data_i  => data_i,
     data_o  => data_o);
 
@@ -272,9 +272,9 @@ begin
 
     if (r or w) = '1' then
       if address(19 downto 13)&'0' = x"FE" then
-        kernel65cs<= '1';
+        kickstartcs<= '1';
       else
-        kernel65cs <='0';
+        kickstartcs <='0';
       end if;
       if address(19 downto 13)&'0' = x"EE" then
         kernel64cs<= '1';
@@ -309,7 +309,7 @@ begin
     else
       cia1cs <= '0';
       cia2cs <= '0';
-      kernel65cs <= '0';
+      kickstartcs <= '0';
       kernel64cs <= '0';
       basic64cs <= '0';
     end if;

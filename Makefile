@@ -19,8 +19,8 @@ kickstart65gs.bin:	kickstart.a65
 kernel65.bin:	kernel65.a65
 	Ophis-2.0-standalone/ophis -4 kernel65.a65
 
-kernel65.vhdl:	rom_template.vhdl kernel65.bin makerom
-	./makerom rom_template.vhdl kernel65.bin kernel65
+kickstart.vhdl:	rom_template.vhdl kickstart65gs.bin makerom
+	./makerom rom_template.vhdl kickstart65gs.bin kickstart
 
 kernel64.vhdl:	rom_template.vhdl kernel64.bin makerom
 	./makerom rom_template.vhdl kernel64.bin kernel64
@@ -28,10 +28,7 @@ kernel64.vhdl:	rom_template.vhdl kernel64.bin makerom
 basic64.vhdl:	rom_template.vhdl basic64.bin makerom
 	./makerom rom_template.vhdl basic64.bin basic64
 
-hesmonc000.vhdl:	rom_template.vhdl hesmonc000.bin makerom
-	./makerom rom_template.vhdl hesmonc000.bin hesmonc000
-
-transfer:
+transfer:	kickstart.vhdl
 	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
 
 

@@ -190,6 +190,7 @@ architecture Behavioral of machine is
       fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
       colour_ram_cs : out std_logic;
 
+      viciii_io_mode : in std_logic_vector(1 downto 0);
       colourram_at_dc00 : in std_logic
       );
   end component;
@@ -232,6 +233,7 @@ architecture Behavioral of machine is
       colour_ram_fastio_rdata : out std_logic_vector(7 downto 0);
       colour_ram_cs : in std_logic;
 
+      viciii_io_mode : out std_logic_vector(1 downto 0);
       colourram_at_dc00 : out std_logic
       );
   end component;
@@ -291,7 +293,9 @@ architecture Behavioral of machine is
 
   signal colourram_at_dc00 : std_logic := '0';
   signal colour_ram_cs : std_logic;
-  
+
+  signal viciii_io_mode : std_logic_vector(1 downto 0);
+
   signal monitor_pc : std_logic_vector(15 downto 0);
   signal monitor_state : std_logic_vector(7 downto 0);
   signal monitor_mem_address : std_logic_vector(27 downto 0);
@@ -495,7 +499,8 @@ begin
     fastio_vic_rdata => fastio_vic_rdata,
     fastio_colour_ram_rdata => colour_ram_fastio_rdata,
     colour_ram_cs => colour_ram_cs,
-    
+
+    viciii_io_mode => viciii_io_mode,
     colourram_at_dc00 => colourram_at_dc00
     );
 
@@ -518,13 +523,14 @@ begin
       fastram_dataout => fastram_dataout,    
       colour_ram_fastio_rdata => colour_ram_fastio_rdata,
       colour_ram_cs => colour_ram_cs,
-
+      
       fastio_addr     => fastio_addr,
       fastio_read     => fastio_read,
       fastio_write    => fastio_write,
       fastio_wdata    => fastio_wdata,
       fastio_rdata    => fastio_vic_rdata,
 
+      viciii_io_mode  => viciii_io_mode,
       colourram_at_dc00 => colourram_at_dc00
       );
   

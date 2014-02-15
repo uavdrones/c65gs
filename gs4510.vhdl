@@ -93,13 +93,18 @@ entity gs4510 is
     fastio_vic_rdata : in std_logic_vector(7 downto 0);
     fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
     colour_ram_cs : out std_logic;
-    
+
+    viciii_io_mode : in std_logic_vector(1 downto 0);
+
     colourram_at_dc00 : in std_logic
     );
 end entity gs4510;
 
 architecture Behavioural of gs4510 is
 
+  -- Force mapping of kickstart ROM @ E000
+  signal kickstart_on : std_logic := '1';
+  
   -- i-cache control lines
   signal icache_delay : std_logic;
   signal accessing_icache : std_logic;
@@ -351,6 +356,9 @@ begin
 
     cpuport_ddr <= x"FF";
     cpuport_value <= x"3F";    
+
+    -- Map Kickstart ROM
+    kickstart_on <= '1';
     
   end procedure reset_cpu_state;
 
@@ -416,7 +424,7 @@ begin
     
     -- IO
     if (blocknum=13) and ((lhc(0)='1') or (lhc(1)='1')) and (lhc(2)='1') then
-      temp_address(27 downto 12) := x"FFD3";
+      temp_address(27 downto 12) := x"FFD" & "00" & viciii_io_mode;
       temp_addresS(11 downto 0) := short_address(11 downto 0);
     end if;
     -- CHARROM
@@ -426,23 +434,32 @@ begin
     end if;
     -- KERNEL
     if (blocknum=14) and (lhc(1)='1') and (writeP=false) then
---      temp_address(27 downto 12) := x"002E";      
-      temp_address(27 downto 12) := x"FFEE";      
+      temp_address(27 downto 12) := x"002E";      
+--      temp_address(27 downto 12) := x"FFEE";      
     end if;
     if (blocknum=15) and (lhc(1)='1') and (writeP=false) then
---      temp_address(27 downto 12) := x"002F";      
-      temp_address(27 downto 12) := x"FFEF";      
+      temp_address(27 downto 12) := x"002F";      
+--      temp_address(27 downto 12) := x"FFEF";      
     end if;
     -- KERNEL
     if (blocknum=10) and (lhc(0)='1') and (writeP=false) then
---      temp_address(27 downto 12) := x"002A";      
-      temp_address(27 downto 12) := x"FFEA";      
+      temp_address(27 downto 12) := x"002A";      
+--      temp_address(27 downto 12) := x"FFEA";      
     end if;
     if (blocknum=11) and (lhc(0)='1') and (writeP=false) then
---      temp_address(27 downto 12) := x"002B";      
-      temp_address(27 downto 12) := x"FFEB";      
+      temp_address(27 downto 12) := x"002B";      
+--      temp_address(27 downto 12) := x"FFEB";      
     end if;
 
+    if kickstart_on='1' then
+      if blocknum=14 then
+        temp_address(27 downto 12) := x"FFFE";
+      end if;
+      if blocknum=15 then
+        temp_address(27 downto 12) := x"FFFF";
+      end if;
+    end if;
+    
     -- XXX $D030 lines not yet supported
     
     return temp_address;
@@ -749,6 +766,8 @@ begin
       else
         state <= next_state;
       end if;
+      -- Also, any write to $01 ends kickstart mode.
+      kickstart_on <= '0';
     else
       long_address := resolve_address_to_long(address,true);
       --report "Writing $" & to_hstring(value) & " @ $" & to_hstring(address)

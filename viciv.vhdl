@@ -74,6 +74,7 @@ entity viciv is
     colour_ram_fastio_rdata : out std_logic_vector(7 downto 0);
     colour_ram_cs : in std_logic;
 
+    viciii_io_mode : out std_logic_vector(1 downto 0) := "00";
     colourram_at_dc00 : out std_logic
     );
 end viciv;
@@ -1007,8 +1008,36 @@ begin
                                         -- http://www.devili.iki.fi/Computers/Commodore/C65/System_Specification/Chapter_2/page101.html
                                         -- http://www.devili.iki.fi/Computers/Commodore/C65/System_Specification/Chapter_2/page102.html
         elsif register_number=47 then
-          -- C65 VIC-III KEY register for unlocking extended registers.
-          
+          -- C65 VIC-III KEY register for locking/unlocking extended registers.
+
+          -- Writing to $D02F returns IO to C64 compatible by default.
+          viciii_d02f_state <= 0;
+          viciii_io_mode <= "00";
+
+          -- Consider changing modes based on the value written.
+          -- $A5, $96 sets VIC-III mode
+          -- $47, $53 sets VIC-IV mode and enables C65GS peripherals,
+          -- like the sd controller.
+          case viciii_d02f_state is
+            when 0 =>
+              if unsigned(fastio_wdata) = x"A5" then
+                viciii_d02f_state <= 1;
+              end if;
+              if unsigned(fastio_wdata) = x"47" then
+                viciii_d02f_state <= 2;
+              end if;
+            when 1 =>
+              if unsigned(fastio_wdata) = x"96" then
+                viciii_d02f_state <= 0;
+                viciii_io_mode <= "01";
+              end if;
+            when 2 =>
+              if unsigned(fastio_wdata) = x"53" then
+                viciii_d02f_state <= 0;
+                viciii_io_mode <= "11";
+              end if;
+            when others => null;
+          end case;
 
         elsif register_number=48 then
           -- C65 VIC-III Control A Register $D030
