@@ -32,7 +32,9 @@ entity uart_monitor is
     monitor_mem_setpc : out std_logic := '0';
     monitor_mem_stage_trace_mode : out std_logic := '0';
     monitor_mem_trace_mode : out std_logic := '0';
-    monitor_mem_trace_toggle : out std_logic := '0'
+    monitor_mem_trace_toggle : out std_logic := '0';
+
+    viciii_io_mode : in std_logic_vector(1 downto 0)
     );
 end uart_monitor;
 
@@ -95,7 +97,7 @@ architecture behavioural of uart_monitor is
   constant errorMessage : string := crlf & "?SYNTAX  ERROR ";
   constant timeoutMessage : string := crlf & "?DEVICE NOT FOUND  ERROR" & crlf;
 
-  constant registerMessage : string := crlf & "PC   A  X  Y  Z  B  SP    P" & crlf;
+  constant registerMessage : string := crlf & "PC   A  X  Y  Z  B  SP    P NVEBZIDCio" & crlf;
   
   type monitor_state is (Reseting,
                          PrintBanner,PrintHelp,
@@ -127,6 +129,7 @@ architecture behavioural of uart_monitor is
                          ShowRegisters13,ShowRegisters14,ShowRegisters15,ShowRegisters16,
                          ShowRegisters17,ShowRegisters18,ShowRegisters19,
                          ShowP1,ShowP2,ShowP3,ShowP4,ShowP5,ShowP6,ShowP7,ShowP8,
+                         ShowP9,ShowP10,
                          TraceStep,CPUBreak1,WaitOneCycle
                          );
 
@@ -856,9 +859,21 @@ begin
             end if;
           when ShowP8 =>
             if monitor_p(0)='1' then
-              try_output_char('C',NextCommand);
+              try_output_char('C',ShowP9);
             else              
-              try_output_char('.',NextCommand);
+              try_output_char('.',ShowP9);
+            end if;
+          when ShowP9 =>
+            if viciii_io_mode(1)='1' then
+              try_output_char('1',ShowP10);
+            else              
+              try_output_char('0',ShowP10);
+            end if;
+          when ShowP10 =>
+            if viciii_io_mode(0)='1' then
+              try_output_char('1',NextCommand);
+            else              
+              try_output_char('0',NextCommand);
             end if;
                                   
           when EraseCharacter => try_output_char(' ',EraseCharacter1);
