@@ -23,10 +23,12 @@
 	.data 
 	.org $0080
 	.space zptempv 2
+	.space zptempv2 2
 	.space romslab 1
 	.space checksum 4
 	.space timerticks 1
 	.space timerlimit 1
+	.space screenrow 1
 	.text
 
 ;     	    .org $E000
@@ -49,34 +51,63 @@ reset_entry:
 		cle
 		ldx #$ff
 		txs
+		
+
 		; We DO NOT need to mess with $01, because
 		; the 4510 starts up with kickstart mapped at $E000, 
-		; enhanced ($FFD3xxx) IO page mapped at $D000,
-		; and fast RAM elsewhere.
+		; standard ($FFD0xxx) IO page mapped at $D000,
+		; and fast RAM elsewhere.  So we just need to key $D02F
+		; to get enhanced io
+		sec
+		jsr enhanced_io
 
-	;	jsr resetdisplay
-	;	jsr resetpalette
-	;	jsr erasescreen
+		jsr resetdisplay
+		jsr resetpalette
+		jsr erasescreen
 
-		; XXX check state of current ROM
-	;	jsr checkromok
-	;	bcc loadrom
+		; display welcome screen
+		ldx #<msg_kickstart
+		ldy #>msg_kickstart
+		jsr printmessage
+		inc screenrow
+
+		; Check state of current ROM
+		jsr checkromok
+		bcc loadrom
 
 		; ROM is loaded and ready, so transfer control
 		; to it.
-	;	jmp go64
+		ldx #<msg_romok
+		ldy #>msg_romok
+		jsr printmessage
+		jmp go64
 
 loadrom:	; ROM is not loaded, so try to load it, or prompt
 		; for user to insert SD card
+		ldx #<msg_rombad
+		ldy #>msg_rombad
+		jsr printmessage
 
 		; Try to read the MBR from the SD card
+		ldx #<msg_tryingsdcard
+		ldy #>msg_tryingsdcard
+		jsr printmessage
 tryreadmbr:
 		jsr readmbr
 		bcs gotmbr
-		inc $d020
+
+		ldx #$00
+t1:		lda $df00,x
+		sta $0500,x
+		inx
+		bne t1
+
 		jmp tryreadmbr
 		
 gotmbr:
+		ldx #<msg_sdcardfound
+		ldy #<msg_sdcardfound
+		jsr printmessage
 		; got master boot record
 		lda #$3e           ; ">" character
 		sta $07c0          ; $0400+(24*40)
@@ -120,6 +151,8 @@ l7:		lda #$00
 		sta $d683
 		sta $d684
 
+		inc $0427
+
 		jmp readsector
 
 ;;; ----------------------------------------------------------------------------
@@ -139,7 +172,7 @@ readsector:
 		and #$01
 		bne rsbusyfail
 
-redoread:	inc $0424
+redoread:	
 		; ask for sector to be read
 
 		ldx #$f0
@@ -161,16 +194,11 @@ r1:		inz
 		sta timerlimit
 rs3:		jsr checksdtimeout
 		bcc rereadsector
-		inc $0425
 		lda $d680
 		and #$01
 		bne rs3
 
 		; check that we read 512 bytes
-		lda $d688
-		sta $0404
-		lda $d689
-		sta $0405
 		cmp #$02
 		bne redoread
 
@@ -181,13 +209,10 @@ rs3:		jsr checksdtimeout
 		; reset sd card and try again
 rereadsector:   jsr resetsd
 		jsr resetsdtimeout
-		lda $d680
-		sta $0401
 		jmp rs3
 
 
 rsbusyfail:     ; fail
-		inc $0426
 		clc 
 		rts
 
@@ -224,8 +249,6 @@ rs1:
 		and #$01
 		bne rs1
 
-		inc $0400
-
 		jsr resetsdtimeout
 		lda #$01
 		sta $d680		
@@ -238,7 +261,6 @@ rs2:
 
 		; reset succeeded
 resetsdok:	jsr canceltimer
-		inc $0427
 		sec
 		rts
 
@@ -292,7 +314,6 @@ checksdtimeout:
 
 sdtimerirq:
 	lda $dc0d
-	inc $d020
 	inc timerticks
 	jmp $ea81
 
@@ -498,6 +519,44 @@ l3:		; fill screen with spaces
 		sty $db00,x
 		inx
 		bne l3
+
+		lda #$00
+		sta screenrow
+
+		rts
+
+printmessage:
+		stx zptempv
+		sty zptempv+1
+		lda #$00
+		sta zptempv2
+		lda #$04
+		sta zptempv2+1
+		ldx screenrow
+pm2:		cpx #$00
+		beq pm1
+		clc
+		lda zptempv2
+		adc #$28
+		sta zptempv2
+		lda zptempv2+1
+		adc #$00
+		sta zptempv2+1
+		dex
+		bne pm2
+pm1:
+		ldy #$27
+pm3:		lda (zptempv),y
+		; convert ASCII/PETSCII to screen codes
+		cmp #$40
+		bcc pm4
+		and #$1f
+pm4:		sta (zptempv2),y
+		dey
+		bpl pm3
+
+		inc screenrow
+
 		rts
 
 ; Transfer control to C64 kernel.
@@ -546,13 +605,23 @@ resetmemmap:
 ; C64 standard IO map.
 enhanced_io:
 		bcs l1
+		; Return to VIC-II / C64 IO
 		lda #$00
 		sta $D02F
-l1:		lda #$a5
+l1:		; Enable VIC-IV / C65GS IO
+		lda #$47
 		sta $D02F
-		lda #$96
+		lda #$53
 		sta $D02F
 		RTS
+
+; messages.  All have to be 40 bytes long
+msg_kickstart:        .byte "C65GS KICKSTART V00.00 PRE-ALPHA        "
+msg_romok:            .byte "ROM CHECKSUM OK - BOOTING               "
+msg_rombad:	      .byte "ROM CHECKSUM FAIL - LOADING ROM         "
+msg_tryingsdcard:     .byte "LOOKING FOR SDCARD...                   "
+msg_sdcardfound:      .byte "SD CARD FOUND                           "
+
 
 ;;; ----------------------------------------------------------------------------
 ;;; CPU entry vectors
