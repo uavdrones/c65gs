@@ -342,15 +342,13 @@ l16:		lda $DE2C,x
 		; Now load root directory cluster.
 		; (fs_clusternumber was set above)
 		jsr fs_clustertosector
-		jsr printsdaddress
 		jsr sd_fix_sectornumber
-		jsr printsdaddress
 		jsr readsector
 		bcc sdcarderror
 		ldx #$00
 l99:		lda $DE00,x
 		and #$1f
-;		sta $0608,x
+		sta $0608,x
 		inx
 		bne l99
 
