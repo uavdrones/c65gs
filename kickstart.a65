@@ -25,13 +25,19 @@
 	.space zptempv 2
 	.space zptempv2 2
 	.space romslab 1
-	.space checksum 4
 	.space timerticks 1
 	.space timerlimit 1
 	.space screenrow 1
+
+	.org $0200
+	.space checksum 4
 	.space part_startsector 4
 	.space fs_startfat 4
-	.space fs_startrootdir 4
+	.space fs_reservedsectors 4
+	.space fs_datasectors 4
+	.space fs_clustercount 4
+	.space fs_sectorspercluster 1
+
 	.text
 
 ;     	    .org $E000
@@ -197,6 +203,120 @@ l9:		lda part_startsector,x
 		ldz $DE00+44
 		jsr printhex
 
+		; The information of relevance we have now is:
+		; $DE0D - sectors per cluster
+		; $DE0E-$DE0F - reserved sectors
+		; $DE10 - number of copies of FAT
+		; $DE11 - Root dir entry count (0 on FAT32)
+		; $DE20-$DE23 - number of sectors in the file system
+		; $DE24-$DE27 - number of sectors in one copy of the FAT
+		; $DE2C-$DE2F - number of reserved clusters
+		
+		; We need to work out if this is a FAT32 partition by working out
+		; the number of clusters.  To work that out, we need to work out
+		; the number of data sectors.  To work that out, we need to work out
+		; the number of reserved sectors.
+		
+		; first, filter out obviously FAT16/FAT12 file systems
+		lda $DE11
+		bne badfs
+
+		; With root directory entries = 0, the reserved sector count
+		; is the number of reserved sectors, plus (copies of fat) *
+		; (sectors in one copy of the fat)
+		ldx #$03
+l11:		lda $DE0E,x
+		sta fs_reservedsectors,x
+		dex
+		bpl l11
+		ldy $DE10
+		beq addedfatsectors
+addnextfatsectors:
+		ldx #$00
+		clc
+l12:		lda fs_reservedsectors,x
+		adc $DE24,x
+		sta fs_reservedsectors,x
+		inx
+		cpx #$04
+		bne l12
+		dey
+		bpl addnextfatsectors
+addedfatsectors:
+
+		; also calculate number of data sectors
+		sec
+		ldx #$03
+l13:		lda $DE20,x
+		sbc fs_reservedsectors,x
+		sta fs_datasectors,x
+		sta fs_clustercount,x
+		dex
+		bpl l13
+
+		; from number of data sectors and sectors per cluster,
+		; we can work out the number of clusters.
+		lda $DE0D
+		sta fs_sectorspercluster
+		tay
+		and #$fe
+		beq gotclustercount
+l14:
+		ldx #$03
+		clc
+l15:		lda fs_clustercount,x
+		ror
+		sta fs_clustercount,x
+		dex
+		bpl l15
+		tya
+		lsr
+		tay
+		and #$fe
+		bne l14
+gotclustercount:
+
+		; filter out non-FAT32 filesystems
+		; NOTE: FAT32 can have as few as 65525 clusters, but we do not support
+		; such file systems, which should be rare, anyway.
+		lda fs_clustercount+3
+		ora fs_clustercount+2
+		beq badfs
+
+		ldx #<msg_reservedsectors
+		ldy #>msg_reservedsectors		
+		jsr printmessage
+		ldy #$00
+		ldz fs_reservedsectors+3
+		jsr printhex
+		ldz fs_reservedsectors+2
+		jsr printhex
+		ldz fs_reservedsectors+1
+		jsr printhex
+		ldz fs_reservedsectors+0
+		jsr printhex
+
+		ldz fs_datasectors+3
+		jsr printhex
+		ldz fs_datasectors+2
+		jsr printhex
+		ldz fs_datasectors+1
+		jsr printhex
+		ldz fs_datasectors+0
+		jsr printhex
+
+		ldz fs_clustercount+3
+		jsr printhex
+		ldz fs_clustercount+2
+		jsr printhex
+		ldz fs_clustercount+1
+		jsr printhex
+		ldz fs_clustercount+0
+		jsr printhex
+	
+		; MILESTONE: Have file system properties.
+		lda #$3e           ; ">" character
+		sta $07c2          ; $0400+(24*40)+2
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
@@ -700,7 +820,7 @@ phd3:		lda (zptempv2),y
 phd2:		txa
 
 		ora #$30
-		cmp #$39
+		cmp #$3a
 		bcc phd1
 		sbc #$39
 phd1:		sta (zptempv2),y
@@ -772,7 +892,8 @@ msg_sdcarderror:      .byte "ERROR READING FROM SD CARD              "
 msg_badformat:	      .byte "BAD MBR OR DOS BOOT SECTOR.             "
 msg_sdcardfound:      .byte "READ PARTITION TABLE FROM SDCARD        "
 msg_partitiondetails: .byte "PARTITION 1($$) @$$$$$$$$, SIZE $$$$$$$$"
-msg_fsdetails: 	      .byte "FS SPC:$$ RSVSEC:$$$$ RSVCLUS:$$$$$$$$  "
+msg_fsdetails: 	      .byte " FS SPC:$$ RSVSEC:$$$$ RSVCLUS:$$$$$$$$ "
+msg_reservedsectors:  .byte " SYS:$$$$$$$$ DAT:$$$$$$$$ CLUS:$$$$$$$$"
 
 ;;; ----------------------------------------------------------------------------
 ;;; CPU entry vectors
