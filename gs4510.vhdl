@@ -518,8 +518,8 @@ begin
       state <= WaitOneCycle;
     elsif long_address(27 downto 24) = x"8"
           -- Slow RAM also maps to $20000-$3FFFF as ROM (so only for reading)
-          or long_address(27 downto 20) = x"02"
-          or long_address(27 downto 20) = x"03"
+          or long_address(27 downto 16) = x"002"
+          or long_address(27 downto 16) = x"003"
     then
       accessing_slowram <= '1';
       slowram_addr <= std_logic_vector(long_address(23 downto 1));
