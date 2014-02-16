@@ -28,6 +28,7 @@ entity uart_monitor is
     monitor_mem_attention_request : out std_logic := '0';
     monitor_mem_attention_granted : in std_logic;
     monitor_mem_read : out std_logic := '0';
+    monitor_mem_read_mapped : out std_logic := '0';
     monitor_mem_write : out std_logic := '0';
     monitor_mem_setpc : out std_logic := '0';
     monitor_mem_stage_trace_mode : out std_logic := '0';
@@ -88,7 +89,8 @@ architecture behavioural of uart_monitor is
     "? or h[elp]            - Display this help" & crlf &
     "f<low> <high> <byte>   - Fill memory from <low> to <high> with value <byte>" &    crlf &
     "g<address>             - Set PC to <address> and resume execution" & crlf &
-    "m<address>             - Display contents of memory" & crlf &
+    "m<address>             - Display contents of memory (28 bit addresses)" & crlf &
+    "d<address>             - Display contents of memory (16 bit CPU memory map)" & crlf &
     "r                      - Print processor state." & crlf &
     "s<address> <value> ... - Set memory." & crlf &
     "t<0|1>                 - Enable/disable tracing." & crlf &
@@ -544,7 +546,9 @@ begin
                 state <= NextCommand;
               end if;
             end if;
-          when NextCommand => cmdlen <= 1; try_output_char(cr,NextCommand2);
+          when NextCommand =>
+            monitor_mem_read_mapped <= '0';
+            cmdlen <= 1; try_output_char(cr,NextCommand2);
           when NextCommand2 => try_output_char(lf,PrintPrompt);
           when PrintPrompt => cmdlen <= 1; try_output_char('.',AcceptingInput);
           when AcceptingInput =>
@@ -636,6 +640,19 @@ begin
                 report "trying to parse hex" severity note;
                 parse_hex(LoadMemory1);
               elsif cmdbuffer(1) = 'm' or cmdbuffer(1) = 'M' then
+                report "read memory command" severity note;
+                parse_position <= 2;
+                report "trying to parse hex" severity note;
+                parse_hex(ShowMemory1);
+                if cmdbuffer(1)='m' then
+                  -- m prints one line
+                  line_number <= 31;
+                else
+                  -- M prints 32 lines
+                  line_number <= 0;
+                end if;
+              elsif cmdbuffer(1) = 'd' or cmdbuffer(1) = 'D' then
+                monitor_mem_read_mapped <= '1';
                 report "read memory command" severity note;
                 parse_position <= 2;
                 report "trying to parse hex" severity note;

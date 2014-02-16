@@ -117,6 +117,7 @@ architecture Behavioral of machine is
       monitor_mem_rdata : in unsigned(7 downto 0);
       monitor_mem_wdata : out unsigned(7 downto 0);
       monitor_mem_read : out std_logic := '0';
+      monitor_mem_read_mapped : out std_logic := '0';
       monitor_mem_write : out std_logic := '0';
       monitor_mem_setpc : out std_logic := '0';
       monitor_mem_trace_mode : out std_logic;
@@ -153,6 +154,7 @@ architecture Behavioral of machine is
       monitor_mem_rdata : out unsigned(7 downto 0);
       monitor_mem_wdata : in unsigned(7 downto 0);
       monitor_mem_read : in std_logic;
+      monitor_mem_read_mapped : in std_logic;
       monitor_mem_write : in std_logic;
       monitor_mem_setpc : in std_logic;
       monitor_mem_attention_request : in std_logic;
@@ -304,6 +306,7 @@ architecture Behavioral of machine is
   signal monitor_mem_rdata : unsigned(7 downto 0);
   signal monitor_mem_wdata : unsigned(7 downto 0);
   signal monitor_mem_read : std_logic;
+  signal monitor_mem_read_mapped : std_logic;
   signal monitor_mem_write : std_logic;
   signal monitor_mem_setpc : std_logic;
   signal monitor_mem_attention_request : std_logic;
@@ -472,6 +475,7 @@ begin
     monitor_mem_rdata => monitor_mem_rdata,
     monitor_mem_wdata => monitor_mem_wdata,
     monitor_mem_read => monitor_mem_read,
+    monitor_mem_read_mapped => monitor_mem_read_mapped,
     monitor_mem_write => monitor_mem_write,
     monitor_mem_setpc => monitor_mem_setpc,
     monitor_mem_attention_request => monitor_mem_attention_request,
@@ -581,6 +585,7 @@ begin
     monitor_mem_rdata => monitor_mem_rdata,
     monitor_mem_wdata => monitor_mem_wdata,
     monitor_mem_read => monitor_mem_read,
+    monitor_mem_read_mapped => monitor_mem_read_mapped,
     monitor_mem_write => monitor_mem_write,
     monitor_mem_setpc => monitor_mem_setpc,
     monitor_mem_attention_request => monitor_mem_attention_request,

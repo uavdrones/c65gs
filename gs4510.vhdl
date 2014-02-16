@@ -55,6 +55,7 @@ entity gs4510 is
     monitor_mem_rdata : out unsigned(7 downto 0);
     monitor_mem_wdata : in unsigned(7 downto 0);
     monitor_mem_read : in std_logic;
+    monitor_mem_read_mapped : in std_logic;
     monitor_mem_write : in std_logic;
     monitor_mem_setpc : in std_logic;
     monitor_mem_attention_request : in std_logic;
@@ -1444,7 +1445,12 @@ begin
                           MonitorAccessDone);
         elsif monitor_mem_read='1' then          
           -- Read from specified long address
-          read_long_address(unsigned(monitor_mem_address),MonitorReadDone);
+          if monitor_mem_read_mapped='0' then
+            read_long_address(unsigned(monitor_mem_address),MonitorReadDone);
+          else
+            read_data_byte(unsigned(monitor_mem_address(15 downto 0)),
+                           MonitorReadDone);
+          end if;
           -- and optionally set PC
           if monitor_mem_setpc='1' then
             report "PC set by monitor interface" severity note;
