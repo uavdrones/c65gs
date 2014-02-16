@@ -13,8 +13,8 @@ all:	makerom kernel65.vhdl \
 	/opt/Xilinx/14.7/ISE_DS/ISE/bin/lin/map -intstyle ise -p xc7a100t-csg324-1 -w -logic_opt off -ol "$(ROUTEEFFORT)" -xe n -t 1 -xt 0 -register_duplication off -r 4 -mt off -ir off -pr off -lc off -power off -o container_map.ncd container.ngd container.pcf
 	/opt/Xilinx/14.7/ISE_DS/ISE/bin/lin/par -w -intstyle ise -ol "$(ROUTEEFFORT)" -xe n -mt off container_map.ncd container.ngd container.pcf
 
-kickstart65gs.bin:	kickstart.a65
-	../Ophis/bin/ophis -4 kickstart.a65
+kickstart65gs.bin:	kickstart.a65 Makefile
+	../Ophis/bin/ophis -4 kickstart.a65 -l kickstart.list
 
 kernel65.bin:	kernel65.a65
 	Ophis-2.0-standalone/ophis -4 kernel65.a65
@@ -46,6 +46,9 @@ adctest:	adctest.a65
 
 monitor_drive:	monitor_drive.c Makefile
 	gcc -g -Wall -o monitor_drive monitor_drive.c
+
+kickload:	kickload.c Makefile
+	gcc -g -Wall -o kickload kickload.c
 
 chargen_debug:	chargen_debug.c
 	gcc -Wall -o chargen_debug chargen_debug.c
