@@ -1650,7 +1650,13 @@ begin
               else
                 state <= pending_state;
               end if;
-            when FastIOWait => state <= pending_state; accessing_fastio <= '1';
+            when FastIOWait =>
+              if pending_state = InstructionFetch then
+                ready_for_next_instruction(reg_pc);
+              else
+                state <= pending_state;
+              end if;
+              accessing_fastio <= '1';
             when SlowRamRead1 =>
               slowram_ce <= '0';
               slowram_oe <= '0';
