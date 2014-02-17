@@ -45,25 +45,23 @@ architecture behavioral of iomapper is
       data_i : in std_logic_vector(7 downto 0);
       data_o : out std_logic_vector(7 downto 0));
   end component;
-  component kernel64 is
-    port (
-      Clk : in std_logic;
-      address : in std_logic_vector(12 downto 0);
-      we : in std_logic;
-      cs : in std_logic;
-      data_i : in std_logic_vector(7 downto 0);
-      data_o : out std_logic_vector(7 downto 0));
-  end component;
-  component basic64 is
-    port (
-      Clk : in std_logic;
-      address : in std_logic_vector(12 downto 0);
-      we : in std_logic;
-      cs : in std_logic;
-      data_i : in std_logic_vector(7 downto 0);
-      data_o : out std_logic_vector(7 downto 0));
-  end component;
 
+  component sdcard is
+    port (
+      cpuclock : in std_logic;
+      reset : in std_logic;
+      
+      ---------------------------------------------------------------------------
+      -- fast IO port (clocked at core clock). 1MB address space
+      ---------------------------------------------------------------------------
+      cs : in std_logic;
+      fastio_addr : in unsigned(3 downto 0);
+      fastio_write : in std_logic;
+      fastio_wdata : in unsigned(7 downto 0);
+      fastio_rdata : out unsigned(7 downto 0)
+      );
+  end component;
+  
   component sdcardio is
     port (
       clock : in std_logic;
@@ -142,8 +140,6 @@ architecture behavioral of iomapper is
 
 
   signal kickstartcs : std_logic;
-  signal kernel64cs : std_logic;
-  signal basic64cs : std_logic;
 
   signal clock50hz : std_logic := '1';
   constant divisor50hz : integer := 640000; -- 64MHz/50Hz/2;
@@ -151,6 +147,8 @@ architecture behavioral of iomapper is
   
   signal cia1cs : std_logic;
   signal cia2cs : std_logic;
+
+  signal sdcardcs : std_logic;
 
   signal cia1porta_out : std_logic_vector(7 downto 0);
   signal cia1porta_in : std_logic_vector(7 downto 0);
@@ -163,22 +161,6 @@ begin
     address => address(12 downto 0),
     we      => w,
     cs      => kickstartcs,
-    data_i  => data_i,
-    data_o  => data_o);
-
-  kernel64rom : kernel64 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => kernel64cs,
-    data_i  => data_i,
-    data_o  => data_o);
-
-  basic64rom : basic64 port map (
-    clk     => clk,
-    address => address(12 downto 0),
-    we      => w,
-    cs      => basic64cs,
     data_i  => data_i,
     data_o  => data_o);
 
@@ -233,23 +215,39 @@ begin
     portb_out      => cia1portb_in
     );
 
-  sdcard0 : sdcardio port map (
-    clock => clk,
+  --sdcard0 : sdcardio port map (
+  --  clock => clk,
+  --  reset => reset,
+
+  --  fastio_addr => unsigned(address),
+  --  fastio_write => w,
+  --  fastio_read => r,
+  --  fastio_wdata => unsigned(data_i),
+  --  std_logic_vector(fastio_rdata) => data_o,
+  --  colourram_at_dc00 => colourram_at_dc00,
+
+  --  cs_bo => cs_bo,
+  --  sclk_o => sclk_o,
+  --  mosi_o => mosi_o,
+  --  miso_i => miso_i
+  --  );
+
+  sdcard0 : sdcard port map (
+    cpuclock => clk,
     reset => reset,
 
-    fastio_addr => unsigned(address),
+    cs => sdcardcs,
+    fastio_addr => unsigned(address(3 downto 0)),
     fastio_write => w,
-    fastio_read => r,
     fastio_wdata => unsigned(data_i),
-    std_logic_vector(fastio_rdata) => data_o,
-    colourram_at_dc00 => colourram_at_dc00,
+    std_logic_vector(fastio_rdata) => data_o
 
-    cs_bo => cs_bo,
-    sclk_o => sclk_o,
-    mosi_o => mosi_o,
-    miso_i => miso_i
+    --cs_bo => cs_bo,
+    --sclk_o => sclk_o,
+    --mosi_o => mosi_o,
+    --miso_i => miso_i
     );
-  
+
   process(clk)
   begin
     if rising_edge(clk) then
@@ -271,20 +269,17 @@ begin
   begin  -- process
 
     if (r or w) = '1' then
+      -- kickstart ROM
       if address(19 downto 13)&'0' = x"FE" then
         kickstartcs<= '1';
       else
         kickstartcs <='0';
       end if;
-      if address(19 downto 13)&'0' = x"EE" then
-        kernel64cs<= '1';
+      -- SD card controller
+      if address(19 downto 4)&'0' = x"D368" then
+        sdcardcs<= '1';
       else
-        kernel64cs <='0';
-      end if;
-      if address(19 downto 13)&'0' = x"EA" then
-        basic64cs<= '1';
-      else
-        basic64cs <='0';
+        sdcardcs <='0';
       end if;
 
       -- Now map the CIAs.
@@ -309,9 +304,8 @@ begin
     else
       cia1cs <= '0';
       cia2cs <= '0';
+      sdcardcs <='0';
       kickstartcs <= '0';
-      kernel64cs <= '0';
-      basic64cs <= '0';
     end if;
   end process;
 
