@@ -103,24 +103,24 @@ begin  -- behavioural
   -- SD card controller module.
   --**********************************************************************
   
-  sd0: sd_controller 
-    port map (
-	cs => cs_bo,
-	mosi => mosi_o,
-	miso => miso_i,
-	sclk => sclk_o,
+--  sd0: sd_controller 
+--    port map (
+--	cs => cs_bo,
+--	mosi => mosi_o,
+--	miso => miso_i,
+--	sclk => sclk_o,
 
-        sector_number => sd_sector,
-        sdhc_mode => sdhc_mode,
-	rd =>  sd_doread,
-	wr =>  sd_dowrite,
-	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
-	reset => sd_reset,
-        data_ready => data_ready,
-	din => sd_wdata,
-	dout => sd_rdata,
-	clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
-);
+--        sector_number => sd_sector,
+--        sdhc_mode => sdhc_mode,
+--	rd =>  sd_doread,
+--	wr =>  sd_dowrite,
+--	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
+--	reset => sd_reset,
+--        data_ready => data_ready,
+--	din => sd_wdata,
+--	dout => sd_rdata,
+--	clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
+--);
 
   
   -- XXX also implement F1011 floppy controller emulation.
@@ -137,7 +137,7 @@ begin  -- behavioural
       
       fastio_rdata <= (others => 'Z');
 
-      if  fastio_read='0' and fastio_write='1' then
+      if fastio_write='1' then
         if fastio_write='1' then
           if (fastio_addr(19 downto 5)&'0' = x"D108")
             or (fastio_addr(19 downto 5)&'0' = x"D308") then
