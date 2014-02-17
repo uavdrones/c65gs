@@ -56,30 +56,8 @@ begin  -- behavioural
         if fastio_write='1' then            
           -- Tri-state read lines if writing
           fastio_rdata <= (others => 'Z');
-        else
-          case register_number is
-            when x"1" => fastio_rdata <= reg_sector_number(7 downto 0);
-            when x"2" => fastio_rdata <= reg_sector_number(15 downto 8);
-            when x"3" => fastio_rdata <= reg_sector_number(23 downto 16);
-            when x"4" => fastio_rdata <= reg_sector_number(31 downto 24);
-            when x"f" => fastio_rdata <= reg_write_count;
-            when others => fastio_rdata <= (others => 'Z');
-          end case;
-        end if;
-      end if;
-    end if;
-  end process;
-
-  process(cpuclock,fastio_addr,fastio_write,reset,fastio_wdata,cs) is
-    variable register_number : unsigned(3 downto 0);
-  begin
-    register_number := fastio_addr(3 downto 0);
-    if rising_edge(cpuclock) then
-
-      if reset='1' then
-      else          
-        -- Check for register writing
-        if fastio_write='1' and cs='1' then
+          -- count number of times we have written to a register so that we can
+          -- debug problems with writing registers
           reg_write_count <= reg_write_count + 1;
           case register_number is
             when x"0" =>
@@ -90,7 +68,16 @@ begin  -- behavioural
             when x"4" => reg_sector_number(31 downto 24) <= unsigned(fastio_wdata);
             when others => null;
           end case;
-        end if;              
+        else
+          case register_number is
+            when x"1" => fastio_rdata <= reg_sector_number(7 downto 0);
+            when x"2" => fastio_rdata <= reg_sector_number(15 downto 8);
+            when x"3" => fastio_rdata <= reg_sector_number(23 downto 16);
+            when x"4" => fastio_rdata <= reg_sector_number(31 downto 24);
+            when x"f" => fastio_rdata <= reg_write_count;
+            when others => fastio_rdata <= (others => 'Z');
+          end case;
+        end if;
       end if;
     end if;
   end process;
