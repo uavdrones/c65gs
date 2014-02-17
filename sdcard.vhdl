@@ -18,7 +18,16 @@ entity sdcard is
     fastio_addr : in unsigned(3 downto 0);
     fastio_write : in std_logic;
     fastio_wdata : in unsigned(7 downto 0);
-    fastio_rdata : out unsigned(7 downto 0)
+    fastio_rdata : out unsigned(7 downto 0);
+
+    -------------------------------------------------------------------------
+    -- Lines for the SDcard interface itself
+    -------------------------------------------------------------------------
+    cs_bo : out std_logic;
+    sclk_o : out std_logic;
+    mosi_o : out std_logic;
+    miso_i : in  std_logic
+
     );
 end sdcard;
 
@@ -32,6 +41,11 @@ begin  -- behavioural
   process(cpuclock,fastio_addr,fastio_write,reset,cs) is
     variable register_number : unsigned(3 downto 0);
   begin
+    -- fix SD interface lines for now.
+    cs_bo <= '1';
+    sclk_o <= '1';
+    mosi_o <= '1';
+    
     register_number := fastio_addr(3 downto 0);
     if cs='0' then
       -- Tri-state read lines if not selected

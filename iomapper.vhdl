@@ -58,7 +58,16 @@ architecture behavioral of iomapper is
       fastio_addr : in unsigned(3 downto 0);
       fastio_write : in std_logic;
       fastio_wdata : in unsigned(7 downto 0);
-      fastio_rdata : out unsigned(7 downto 0)
+      fastio_rdata : out unsigned(7 downto 0);
+
+      -------------------------------------------------------------------------
+      -- Lines for the SDcard interface itself
+      -------------------------------------------------------------------------
+      cs_bo : out std_logic;
+      sclk_o : out std_logic;
+      mosi_o : out std_logic;
+      miso_i : in  std_logic
+
       );
   end component;
   
@@ -240,12 +249,12 @@ begin
     fastio_addr => unsigned(address(3 downto 0)),
     fastio_write => w,
     fastio_wdata => unsigned(data_i),
-    std_logic_vector(fastio_rdata) => data_o
+    std_logic_vector(fastio_rdata) => data_o,
 
-    --cs_bo => cs_bo,
-    --sclk_o => sclk_o,
-    --mosi_o => mosi_o,
-    --miso_i => miso_i
+    cs_bo => cs_bo,
+    sclk_o => sclk_o,
+    mosi_o => mosi_o,
+    miso_i => miso_i
     );
 
   process(clk)
@@ -276,7 +285,7 @@ begin
         kickstartcs <='0';
       end if;
       -- SD card controller
-      if address(19 downto 4)&'0' = x"D368" then
+      if address(19 downto 4) = x"D368" then
         sdcardcs<= '1';
       else
         sdcardcs <='0';
