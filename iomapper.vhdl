@@ -224,38 +224,38 @@ begin
     portb_out      => cia1portb_in
     );
 
-  --sdcard0 : sdcardio port map (
-  --  clock => clk,
-  --  reset => reset,
-
-  --  fastio_addr => unsigned(address),
-  --  fastio_write => w,
-  --  fastio_read => r,
-  --  fastio_wdata => unsigned(data_i),
-  --  std_logic_vector(fastio_rdata) => data_o,
-  --  colourram_at_dc00 => colourram_at_dc00,
-
-  --  cs_bo => cs_bo,
-  --  sclk_o => sclk_o,
-  --  mosi_o => mosi_o,
-  --  miso_i => miso_i
-  --  );
-
-  sdcard0 : sdcard port map (
-    cpuclock => clk,
+  sdcard0 : sdcardio port map (
+    clock => clk,
     reset => reset,
 
-    cs => sdcardcs,
-    fastio_addr => unsigned(address(3 downto 0)),
+    fastio_addr => unsigned(address),
     fastio_write => w,
+    fastio_read => r,
     fastio_wdata => unsigned(data_i),
     std_logic_vector(fastio_rdata) => data_o,
+    colourram_at_dc00 => colourram_at_dc00,
 
     cs_bo => cs_bo,
     sclk_o => sclk_o,
     mosi_o => mosi_o,
     miso_i => miso_i
     );
+
+  --sdcard0 : sdcard port map (
+  --  cpuclock => clk,
+  --  reset => reset,
+
+  --  cs => sdcardcs,
+  --  fastio_addr => unsigned(address(3 downto 0)),
+  --  fastio_write => w,
+  --  fastio_wdata => unsigned(data_i),
+  --  std_logic_vector(fastio_rdata) => data_o,
+
+  --  cs_bo => cs_bo,
+  --  sclk_o => sclk_o,
+  --  mosi_o => mosi_o,
+  --  miso_i => miso_i
+  --  );
 
   process(clk)
   begin

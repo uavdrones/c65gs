@@ -366,7 +366,7 @@ architecture Behavioral of viciv is
   signal indisplay_t2 : std_logic := '0';
   signal indisplay_t3 : std_logic := '0';
   signal next_card_number : unsigned(15 downto 0) := (others => '0');
-  signal cycles_to_next_card : unsigned(7 downto 0);
+  signal cycles_to_next_card : unsigned(7 downto 0) := (others => '1');
   
   signal reset : std_logic := '0';
   
@@ -396,7 +396,7 @@ architecture Behavioral of viciv is
   signal inborder_t1 : std_logic;
   signal inborder_t2 : std_logic;
   signal xfrontporch : std_logic;
-  signal xbackporch : std_logic;
+  signal xbackporch : std_logic := '0';
 
   signal ramaddress : std_logic_vector(13 downto 0);
   signal ramdata : std_logic_vector(63 downto 0);
@@ -1190,7 +1190,6 @@ begin
     variable next_glyph_colour_temp : std_logic_vector(7 downto 0) := (others => '0');
   begin    
     if rising_edge(pixelclock) then
-
       -- Acknowledge IRQs after reading $D019
       irq_raster <= irq_raster and (not ack_raster);
       irq_colissionspritebitmap <= irq_colissionspritebitmap and (not ack_colissionspritebitmap);
