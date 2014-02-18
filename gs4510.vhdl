@@ -508,7 +508,9 @@ begin
     -- Schedule the memory read from the appropriate source.
     accessing_ram <= '0'; accessing_slowram <= '0';
     accessing_fastio <= '0'; accessing_vic_fastio <= '0';
+    accessing_colour_ram_fastio <= '0';
     accessing_cpuport <= '0';
+    
     if long_address(27 downto 17)="00000000000" then
       report "Reading from fastram address $" & to_hstring(long_address(19 downto 0))
         & ", word $" & to_hstring(long_address(18 downto 3)) severity note;
@@ -535,8 +537,6 @@ begin
       state <= SlowRamRead1;
     elsif long_address(27 downto 20) = x"FF" then
       accessing_fastio <= '1';
-      accessing_vic_fastio <= '0';
-      accessing_colour_ram_fastio <= '0';
       -- If reading IO page from $D{0,1,2,3}0{0-7}X, then the access is from
       -- the VIC-IV.
       -- If reading IO page from $D{0,1,2,3}{1,2,3}XX, then the access is from
