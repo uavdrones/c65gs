@@ -22,6 +22,7 @@ architecture behavior of tb_iomapper is
           w : in std_logic;
           data_i : in std_logic_vector(7 downto 0);
           data_o : out std_logic_vector(7 downto 0);
+          kickstart_o : out std_logic_vector(7 downto 0);
 
           ps2data : in std_logic;
           ps2clock : in std_logic;
@@ -51,6 +52,7 @@ architecture behavior of tb_iomapper is
   signal w : std_logic := '0';
   signal data_i : std_logic_vector(7 downto 0) := x"00";
   signal data_o : std_logic_vector(7 downto 0);
+  signal kickstart_o : std_logic_vector(7 downto 0);
   
   signal ps2data : std_logic := '1';
   signal ps2clock : std_logic := '1';
@@ -78,6 +80,7 @@ begin
     address => address,
     r => r, w => w,
     data_i => data_i, data_o => data_o,
+    kickstart_o => kickstart_o,
     colourram_at_dc00 => colourram_at_dc00,
     seg_led => seg_led,
 
@@ -133,7 +136,7 @@ begin
     report "write_count=$" & to_hstring(data_o) severity note;
     r <= '1'; w <= '0'; address <= x"FE000";
     tick;
-    report "kickstart_read=$" & to_hstring(data_o) severity note;
+    report "kickstart_read=$" & to_hstring(kickstart_o) severity note;
 
     
     assert false report "End of simulation" severity failure;

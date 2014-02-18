@@ -92,6 +92,7 @@ entity gs4510 is
     fastio_wdata : out std_logic_vector(7 downto 0);
     fastio_rdata : inout std_logic_vector(7 downto 0);
     fastio_vic_rdata : in std_logic_vector(7 downto 0);
+    fastio_kickstart_rdata : in std_logic_vector(7 downto 0);
     fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
     colour_ram_cs : out std_logic;
 
@@ -314,6 +315,7 @@ architecture Behavioural of gs4510 is
 -- power-on initialised RAM in the FPGA mapped via our io interface.
   signal accessing_fastio : std_logic;
   signal accessing_vic_fastio : std_logic;
+  signal accessing_kickstart_fastio : std_logic;
   signal accessing_colour_ram_fastio : std_logic;
   signal accessing_ram : std_logic;
   signal accessing_slowram : std_logic;
@@ -508,6 +510,7 @@ begin
     -- Schedule the memory read from the appropriate source.
     accessing_ram <= '0'; accessing_slowram <= '0';
     accessing_fastio <= '0'; accessing_vic_fastio <= '0';
+    accessing_kickstart_fastio <= '0';
     accessing_colour_ram_fastio <= '0';
     accessing_cpuport <= '0';
     
@@ -552,6 +555,9 @@ begin
       if long_address(19 downto 16) = x"8" then
         report "VIC 64KB colour RAM access from VIC fastio" severity note;
         accessing_colour_ram_fastio <= '1';
+      end if;
+      if long_address(19 downto 16) = x"F" then
+        accessing_kickstart_fastio <= '1';
       end if;
       if long_address(19 downto 16) = x"D" then
         if long_address(15 downto 14) = "00" then    --   $D{0,1,2,3}XXX
@@ -836,8 +842,11 @@ begin
         return cpuport_value;
       end if;
     elsif accessing_colour_ram_fastio='1' then 
-      report "reading colour RAM fastio byte $" & to_hstring(fastio_vic_rdata) severity note;
+      report "reading colour RAM fastio byte $" & to_hstring(fastio_colour_ram_rdata) severity note;
       return unsigned(fastio_colour_ram_rdata);
+    elsif accessing_kickstart_fastio='1' then 
+      report "reading kickstart fastio byte $" & to_hstring(fastio_kickstart_rdata) severity note;
+      return unsigned(fastio_kickstart_rdata);
     elsif accessing_vic_fastio='1' then 
       report "reading VIC fastio byte $" & to_hstring(fastio_vic_rdata) severity note;
       return unsigned(fastio_vic_rdata);

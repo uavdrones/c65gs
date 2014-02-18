@@ -17,6 +17,7 @@ entity iomapper is
         w : in std_logic;
         data_i : in std_logic_vector(7 downto 0);
         data_o : out std_logic_vector(7 downto 0);
+        kickstart_o : out std_logic_vector(7 downto 0);
 
         ps2data : in std_logic;
         ps2clock : in std_logic;
@@ -170,7 +171,7 @@ begin
     we      => w,
     cs      => kickstartcs,
     data_i  => data_i,
-    data_o  => data_o);
+    data_o  => kickstart_o);
 
   cia1: cia6526 port map (
     cpuclock => clk,

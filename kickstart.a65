@@ -58,6 +58,7 @@
 
 
 reset_entry:
+
 		; get CPU state sensible
 		sei
 		cld
@@ -106,6 +107,9 @@ loadrom:	; ROM is not loaded, so try to load it, or prompt
 		ldy #>msg_tryingsdcard
 		jsr printmessage
 tryreadmbr:
+		lda #$00
+		jsr checkpoint
+
 		jsr readmbr
 		bcs gotmbr
 
@@ -563,8 +567,12 @@ readmbr:
 		bcs l7
 		rts
 
-		; MBR is sector 0
-l7:		lda #$00
+l7:		
+		lda #$03
+		jsr checkpoint
+
+		; MBR is sector 0	
+		lda #$00
 		sta $D681
 		sta $d682
 		sta $d683
@@ -714,6 +722,19 @@ resetsd:
 		; Reset involves writing $00 and then $01 to $D680, waiting
 		; for bit 0 of $D680 to clear.
 
+		lda #$04
+		jsr checkpoint
+;		inc $d021
+		; XXX LDZ $D680 doesn't work here!
+		; some sort of CPU bug?
+		ldz $d680
+		nop
+		nop
+		nop
+;		dec $d021
+		nop
+		jsr printhex
+
 		; try SDHC mode first
 ;		lda #$41
 ;		sta $d680
@@ -730,6 +751,12 @@ sdresetsequence:
 		sta timerlimit
 		lda #$00
 		sta $d680		
+
+		lda #$05
+		jsr checkpoint
+		ldz $d680
+		jsr printhex
+
 rs1:            
 		jsr checksdtimeout
 		bcc sdresettimedout
@@ -738,6 +765,9 @@ rs1:
 		lda $d680
 		and #$01
 		bne rs1
+
+		lda #$01
+		jsr checkpoint
 
 		jsr resetsdtimeout
 		lda #$01
@@ -748,6 +778,9 @@ rs2:
 		lda $d680
 		and #$01
 		bne rs2
+
+		lda #$02
+		jsr checkpoint
 
 		; reset succeeded
 resetsdok:	jsr canceltimer
@@ -1019,6 +1052,15 @@ l3:		; fill screen with spaces
 
 		rts
 
+checkpoint:
+		pha
+		ldx #<msg_checkpoint
+		ldy #>msg_checkpoint
+		jsr printmessage
+		ldy #$00
+		plz
+		jmp printhex
+
 printmessage:
 		stx zptempv
 		sty zptempv+1
@@ -1035,7 +1077,13 @@ pm2:		cpx #$00
 		sta zptempv2
 		lda zptempv2+1
 		adc #$00
-		sta zptempv2+1
+		; if reached bottom of screen, then loop back to top of screen
+		cmp #$08
+		bcc pm5		
+		lda #$00
+		sta zptempv2
+		lda #$04
+pm5:		sta zptempv2+1
 		dex
 		bne pm2
 pm1:
@@ -1152,6 +1200,7 @@ msg_fsdetails: 	      .byte " FS SPC:$$ RSVSEC:$$$$ RSVCLUS:$$$$$$$$ "
 msg_reservedsectors:  .byte " SYS:$$$$$$$$ DAT:$$$$$$$$ CLUS:$$$$$$$$"
 msg_sectornumber:     .byte " CLUSTER:$$$$$$$$ -> SECTOR:$$$$$$$$    "
 msg_sdaddress:	      .byte " D684-D681=$$$$$$$$                     "
+msg_checkpoint:	      .byte " CHECKPOINT $$ $$ $$ $$ $$ $$ $$ $$ $$  "
 
 ; filename of ROM we want to load in FAT directory format
 txt_c65gsrom:	      .byte "C65GS   ROM"
@@ -1165,6 +1214,7 @@ nmi_entry:	rti
 ; IRQ is used for SD card timeouts
 irq_entry:	pha
 		php
+		inc $d020
 		lda $DC0D
 		inc timerticks
 		plp

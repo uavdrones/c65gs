@@ -191,6 +191,7 @@ architecture Behavioral of machine is
       fastio_wdata : out std_logic_vector(7 downto 0);
       fastio_rdata : inout std_logic_vector(7 downto 0);
       fastio_vic_rdata : in std_logic_vector(7 downto 0);
+      fastio_kickstart_rdata : in std_logic_vector(7 downto 0);
       fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
       colour_ram_cs : out std_logic;
 
@@ -254,6 +255,7 @@ architecture Behavioral of machine is
           w : in std_logic;
           data_i : in std_logic_vector(7 downto 0);
           data_o : out std_logic_vector(7 downto 0);
+          kickstart_o : out std_logic_vector(7 downto 0);
           colourram_at_dc00 : in std_logic;
 
           seg_led : out unsigned(31 downto 0);
@@ -285,6 +287,7 @@ architecture Behavioral of machine is
   signal fastio_wdata : std_logic_vector(7 downto 0);
   signal fastio_rdata : std_logic_vector(7 downto 0);
   signal fastio_vic_rdata : std_logic_vector(7 downto 0);
+  signal fastio_kickstart_rdata : std_logic_vector(7 downto 0);
   signal colour_ram_fastio_rdata : std_logic_vector(7 downto 0);
 
   signal fastram_we : STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -503,6 +506,7 @@ begin
     fastio_wdata => fastio_wdata,
     fastio_rdata => fastio_rdata,
     fastio_vic_rdata => fastio_vic_rdata,
+    fastio_kickstart_rdata => fastio_kickstart_rdata,
     fastio_colour_ram_rdata => colour_ram_fastio_rdata,
     colour_ram_cs => colour_ram_cs,
 
@@ -549,7 +553,9 @@ begin
     nmi => io_nmi, -- (but we might like to AND this with the hardware IRQ button)
     address => fastio_addr,
     r => fastio_read, w => fastio_write,
-    data_i => fastio_wdata, data_o => fastio_rdata,
+    data_i => fastio_wdata,
+    data_o => fastio_rdata,
+    kickstart_o => fastio_kickstart_rdata,
     colourram_at_dc00 => colourram_at_dc00,
     seg_led => seg_led_data,
 
