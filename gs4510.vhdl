@@ -594,6 +594,8 @@ begin
         -- enhanced image pages.
         or long_address(19 downto 8)=x"D00" or long_address(19 downto 7)=x"D10"&'0'
         or long_address(19 downto 8)=x"D20" or long_address(19 downto 7)=x"D30"&'0'
+        -- Kickstart ROM should have no wait state
+        or long_address(19 downto 16)=x"F"
       then 
         if next_state = InstructionFetch then
           ready_for_next_instruction(reg_pc);
@@ -1498,6 +1500,7 @@ begin
                 & " - A:" & to_hstring(std_logic_vector(reg_a))
                 & " X:" & to_hstring(std_logic_vector(reg_x))
                 & " Y:" & to_hstring(std_logic_vector(reg_y))
+                & " Z:" & to_hstring(std_logic_vector(reg_z))
                 & " SP:" & to_hstring(std_logic_vector(reg_sp))
                 & " "
                 & flag_status("N",".",flag_n)
@@ -1650,6 +1653,7 @@ begin
                 state <= pending_state;
               end if;
             when FastIOWait =>
+              report "FastIO read waitstate" severity note;
               if pending_state = InstructionFetch then
                 ready_for_next_instruction(reg_pc);
               else
