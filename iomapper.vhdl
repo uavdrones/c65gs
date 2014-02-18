@@ -152,7 +152,6 @@ architecture behavioral of iomapper is
 
   signal clock50hz : std_logic := '1';
   constant divisor50hz : integer := 640000; -- 64MHz/50Hz/2;
-  signal counter50hz : integer := 0;
   
   signal cia1cs : std_logic;
   signal cia2cs : std_logic;
@@ -257,23 +256,6 @@ begin
   --  miso_i => miso_i
   --  );
 
-  process(clk)
-  begin
-    if rising_edge(clk) then
-      -- Generate 50Hz signal for TOD clock
-      -- (Note that we are a bit conflicted here, as our video mode is PALx4,
-      --  but at 60Hz.  We will make our CIAs take 50Hz like in most PAL countries
-      -- so that we don't confuse things too much.  We will probably add a 50Hz
-      -- raster interrupt filter to help music and games play at the right rate.)
-      if counter50hz<divisor50hz then
-        counter50hz <= counter50hz + 1;
-      else
-        clock50hz <= not clock50hz;
-        counter50hz <= 0;
-      end if;
-    end if;
-  end process;
-  
   process (r,w,address,colourram_at_dc00)
   begin  -- process
 

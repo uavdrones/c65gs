@@ -103,24 +103,24 @@ begin  -- behavioural
   -- SD card controller module.
   --**********************************************************************
   
---  sd0: sd_controller 
---    port map (
---	cs => cs_bo,
---	mosi => mosi_o,
---	miso => miso_i,
---	sclk => sclk_o,
+  sd0: sd_controller 
+    port map (
+	cs => cs_bo,
+	mosi => mosi_o,
+	miso => miso_i,
+	sclk => sclk_o,
 
---        sector_number => sd_sector,
---        sdhc_mode => sdhc_mode,
---	rd =>  sd_doread,
---	wr =>  sd_dowrite,
---	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
---	reset => sd_reset,
---        data_ready => data_ready,
---	din => sd_wdata,
---	dout => sd_rdata,
---	clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
---);
+        sector_number => sd_sector,
+        sdhc_mode => sdhc_mode,
+	rd =>  sd_doread,
+	wr =>  sd_dowrite,
+	dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
+	reset => sd_reset,
+        data_ready => data_ready,
+	din => sd_wdata,
+	dout => sd_rdata,
+	clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
+);
 
   
   -- XXX also implement F1011 floppy controller emulation.
@@ -187,6 +187,7 @@ begin  -- behavioural
           elsif (fastio_addr(19 downto 4) = x"D168"
                  or fastio_addr(19 downto 4) = x"D368") then
             -- microSD controller registers
+            report "Writing to SD card registers at $D68x" severity note;
             case fastio_addr(3 downto 0) is
               when x"0" =>
                 -- status / command register
