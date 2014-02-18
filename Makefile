@@ -38,8 +38,8 @@ simulate:	bcdadder.vhdl alu6502.vhdl cpu6502.vhdl kernel65.vhdl kernel64.vhdl ba
 testcia:	tb_cia.vhdl cia6526.vhdl debugtools.vhdl
 	ghdl -c tb_cia.vhdl cia6526.vhdl debugtools.vhdl -r tb_cia
 
-testadder:	tb_adder.vhdl debugtools.vhdl
-	ghdl -c tb_adder.vhdl debugtools.vhdl -r tb_adder
+testiomapper:	tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcard.vhdl sd.vhdl
+	ghdl -c tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcard.vhdl sd.vhdl -r tb_iomapper
 
 adctest:	adctest.a65
 	Ophis-2.0-standalone/ophis -o adctest adctest.a65
