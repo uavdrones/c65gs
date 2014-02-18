@@ -20,7 +20,7 @@ kickstart.vhdl:	kickstart65gs.bin rom_template.vhdl makerom
 	./makerom rom_template.vhdl kickstart65gs.bin kickstart
 
 transfer:	kickstart.vhdl
-	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
+	scp -p Makefile makerom *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
 
 
 simulate:	iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl ghdl_ram64x16k.vhdl kickstart.vhdl sdcardio.vhdl sd.vhdl
