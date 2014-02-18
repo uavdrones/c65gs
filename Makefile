@@ -20,8 +20,8 @@ transfer:	kickstart.vhdl
 	scp -p Makefile makerom kernel65.a65 *.ucf *.xise *.prj *vhd *vhdl 192.168.56.101:c64accel/
 
 
-simulate:	iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl ghdl_ram64x16k.vhdl kickstart.vhdl
-	ghdl -c iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl ghdl_ram64x16k.vhdl kickstart.vhdl -r cpu_test
+simulate:	iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl ghdl_ram64x16k.vhdl kickstart.vhdl sdcardio.vhdl sd.vhdl
+	ghdl -c iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debugtools.vhdl UART_TX_CTRL.vhd uart_rx.vhdl uart_monitor.vhdl machine.vhdl cia6526.vhdl keymapper.vhdl ghdl_ram8x64k.vhdl charrom.vhdl ghdl_ram64x16k.vhdl kickstart.vhdl sdcardio.vhdl sd.vhdl -r cpu_test
 
 testcia:	tb_cia.vhdl cia6526.vhdl debugtools.vhdl
 	ghdl -c tb_cia.vhdl cia6526.vhdl debugtools.vhdl -r tb_cia

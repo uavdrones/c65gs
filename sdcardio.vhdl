@@ -128,6 +128,7 @@ begin  -- behavioural
            sd_reset,fastio_read,sd_sector,fastio_write,
            f011_track,f011_sector,f011_side,sdio_fsm_error,sdio_error,
            sd_state,sector_buffer) is
+    variable register_num : unsigned(7 downto 0);
   begin
 
     if rising_edge(clock) then
@@ -142,7 +143,9 @@ begin  -- behavioural
           if (fastio_addr(19 downto 5)&'0' = x"D108")
             or (fastio_addr(19 downto 5)&'0' = x"D308") then
             -- F011 FDC emulation registers
-            case "000"&fastio_addr(4 downto 0) is
+            register_num(7 downto 5) := "000";
+            register_num(4 downto 0) := fastio_addr(4 downto 0);
+            case register_num is
               when x"00" =>
                 -- CONTROL |  IRQ  |  LED  | MOTOR | SWAP  | SIDE  |  DS2  |  DS1  |  DS0  | 0 RW
                 --IRQ     When set, enables interrupts to occur,  when reset clears and
@@ -265,7 +268,9 @@ begin  -- behavioural
         if (fastio_addr(19 downto 5)&'0' = x"D108")
           or (fastio_addr(19 downto 5)&'0' = x"D308") then
           -- F011 FDC emulation registers
-          case "000"&fastio_addr(4 downto 0) is
+          register_num(7 downto 5) := "000";
+          register_num(4 downto 0) := fastio_addr(4 downto 0);          
+          case register_num is
             when x"00" =>
               -- CONTROL |  IRQ  |  LED  | MOTOR | SWAP  | SIDE  |  DS2  |  DS1  |  DS0  | 0 RW
               --IRQ     When set, enables interrupts to occur,  when reset clears and
@@ -492,7 +497,6 @@ begin  -- behavioural
             sd_state <= Idle;
         end case;    
 --      end if;
-
     end if;
   end process;
 
