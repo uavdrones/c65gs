@@ -274,35 +274,36 @@ begin
     end if;
   end process;
   
-  process (r,w,address,cia1portb_in,cia1porta_out,colourram_at_dc00)
+  process (r,w,address,colourram_at_dc00)
   begin  -- process
 
-    if (r or w) = '1' then
+    cia1cs <= '0';
+    cia2cs <= '0';
+    sdcardcs <='0';
+    kickstartcs <= '0';
+
+    if (r='1') or (w='1') then
       -- kickstart ROM
       if address(19 downto 13)&'0' = x"FE" then
+        report "selecting KickStart ROM" severity note;
         kickstartcs<= '1';
-      else
-        kickstartcs <='0';
       end if;
       -- SD card controller
       if address(19 downto 4) = x"D368" then
+        report "Selecting SD controlller" severity note;
         sdcardcs<= '1';
-      else
-        sdcardcs <='0';
       end if;
 
       -- Now map the CIAs.
 
       -- These are a bit fun, because they only get mapped if colour RAM isn't
       -- being mapped in $DC00-$DFFF using the C65 2K colour ram register
-      cia1cs <='0';
-      cia2cs <='0';
       if colourram_at_dc00='0' then
         case address(19 downto 8) is
-          when x"D0C" => cia1cs <='1';
-          when x"D1C" => cia1cs <='1';
-          when x"D2C" => cia1cs <='1';
-          when x"D3C" => cia1cs <='1';
+          when x"D0C" => cia1cs <='1'; 
+          when x"D1C" => cia1cs <='1'; 
+          when x"D2C" => cia1cs <='1'; 
+          when x"D3C" => cia1cs <='1'; 
           when x"D0D" => cia2cs <='1';
           when x"D1D" => cia2cs <='1';
           when x"D2D" => cia2cs <='1';
@@ -310,11 +311,6 @@ begin
           when others => null;
         end case;
       end if;
-    else
-      cia1cs <= '0';
-      cia2cs <= '0';
-      sdcardcs <='0';
-      kickstartcs <= '0';
     end if;
   end process;
 

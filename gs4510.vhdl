@@ -1432,7 +1432,6 @@ begin
 
 
       if reset = '0' or state = ResetLow then
-
         -- reset cpu
         state <= VectorRead;
         vector <= x"FFFC";
