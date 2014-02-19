@@ -129,8 +129,11 @@ begin
     tick;
     report "write_count=$" & to_hstring(data_o) severity note;
     tick;
-    r <= '0'; w <= '1'; address <= x"D3C00"; data_i <= x"55";
+    r <= '0'; w <= '1'; address <= x"D3C01"; data_i <= x"55";
     tick;
+    r <= '1'; w <= '0'; address <= x"D3C01"; data_i <= x"55";
+    tick;
+    report "$DC00=$" & to_hstring(data_o) severity note;
     r <= '1'; w <= '0'; address <= x"D3C1F";
     tick;
     report "write_count=$" & to_hstring(data_o) severity note;
