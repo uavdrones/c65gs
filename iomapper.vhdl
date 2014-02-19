@@ -160,8 +160,6 @@ architecture behavioral of iomapper is
   signal cia1cs : std_logic;
   signal cia2cs : std_logic;
 
-  signal sdcardcs : std_logic;
-
   signal cia1porta_out : std_logic_vector(7 downto 0);
   signal cia1porta_in : std_logic_vector(7 downto 0);
   signal cia1portb_out : std_logic_vector(7 downto 0);
@@ -266,7 +264,6 @@ begin
 
     cia1cs <= '0';
     cia2cs <= '0';
-    sdcardcs <='0';
     kickstartcs <= '0';
 
     report "sectorbuffer_o = $" & to_hstring(sectorbuffer_o) severity note;
@@ -274,13 +271,8 @@ begin
     if (r='1') or (w='1') then
       -- kickstart ROM
       if address(19 downto 13)&'0' = x"FE" then
-        report "selecting KickStart ROM" severity note;
+--        report "selecting KickStart ROM" severity note;
         kickstartcs<= '1';
-      end if;
-      -- SD card controller
-      if address(19 downto 4) = x"D368" then
-        report "Selecting SD controlller" severity note;
-        sdcardcs<= '1';
       end if;
 
       -- Now map the CIAs.
