@@ -570,6 +570,7 @@ begin
       fastio_addr <= long_address(19 downto 0);
       last_fastio_addr <= long_address(19 downto 0);
       fastio_read <= '1';
+      fastio_write <= '0';
       -- XXX Some fastio (that referencing dual-port block rams) does require
       -- a wait state.  For now, just apply the wait state to all fastio
       -- addresses.
@@ -718,6 +719,7 @@ begin
       accessing_fastio <= '1';
       fastio_addr <= long_address(19 downto 0);
       last_fastio_addr <= long_address(19 downto 0);
+      fastio_read <= '0';
       fastio_write <= '1';
       fastio_wdata <= value;
       if long_address = x"FFC00A0" then
@@ -833,19 +835,19 @@ begin
         return cpuport_value;
       end if;
     elsif accessing_colour_ram_fastio='1' then 
-      report "reading colour RAM fastio byte $" & to_hstring(fastio_colour_ram_rdata) severity note;
+--      report "reading colour RAM fastio byte $" & to_hstring(fastio_colour_ram_rdata) severity note;
       return unsigned(fastio_colour_ram_rdata);
     elsif accessing_kickstart_fastio='1' then 
-      report "reading kickstart fastio byte $" & to_hstring(fastio_kickstart_rdata) severity note;
+--      report "reading kickstart fastio byte $" & to_hstring(fastio_kickstart_rdata) severity note;
       return unsigned(fastio_kickstart_rdata);
     elsif accessing_sectorbuffer_fastio='1' then 
       report "reading sectorbuffer fastio byte $" & to_hstring(fastio_sectorbuffer_rdata) severity note;
       return unsigned(fastio_sectorbuffer_rdata);
     elsif accessing_vic_fastio='1' then 
-      report "reading VIC fastio byte $" & to_hstring(fastio_vic_rdata) severity note;
+--      report "reading VIC fastio byte $" & to_hstring(fastio_vic_rdata) severity note;
       return unsigned(fastio_vic_rdata);
     elsif accessing_fastio='1' then
-      report "reading fastio byte $" & to_hstring(fastio_rdata) severity note;
+--      report "reading fastio byte $" & to_hstring(fastio_rdata) severity note;
       return unsigned(fastio_rdata);
     elsif accessing_ram='1' then
       report "Extracting fastram value from 64-bit read $" & to_hstring(fastram_dataout) severity note;
