@@ -284,7 +284,7 @@ begin  -- behavioural
           sector_buffer_wdata <= fastio_wdata;
           sector_buffer_we <= '1';
           sector_buffer_oe <= '0';
-          sector_buffer_cs <= '0';
+          sector_buffer_cs <= '1';
         end if;
       end if;
     end write_to_registers;
