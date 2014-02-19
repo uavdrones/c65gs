@@ -148,7 +148,7 @@ begin  -- behavioural
     -- Tri-state read lines if not selected
     fastio_rdata <= (others => 'Z');
 
-    if cs='1' then
+    if cs='1' and rising_edge(cpuclock) then
       -- XXX For debugging have 32 registers, and map
       -- reg_porta_read and portain (and same for port b)
       -- to extra registers for debugging.
