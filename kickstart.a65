@@ -106,9 +106,6 @@ loadrom:	; ROM is not loaded, so try to load it, or prompt
 		ldy #>msg_tryingsdcard
 		jsr printmessage
 tryreadmbr:
-		lda #$00
-		jsr checkpoint
-
 		jsr readmbr
 		bcs gotmbr
 
@@ -567,11 +564,6 @@ readmbr:
 		rts
 
 l7:		
-		lda #$03
-		jsr checkpoint
-		ldz $d680
-		jsr printhex
-
 		; MBR is sector 0	
 		lda #$00
 		sta $D681
@@ -682,11 +674,6 @@ r1:		inz
 		inx
 		bne r1
 rs4:
-		lda #$06
-		jsr checkpoint
-		ldz $d680
-		jsr printhex
-
 		; ask for sector to be read
 		lda #$02
 		sta $d680
@@ -703,9 +690,6 @@ rs3:
 		sta $0700
 		and #$01
 		bne rs3
-		
-		lda #$07
-		jsr checkpoint
 
 		; check that we read 512 bytes
 		lda $d689
@@ -717,10 +701,7 @@ rs3:
 		rts
 
 		; reset sd card and try again
-rereadsector:   		
-		lda #$08
-		jsr checkpoint
-
+rereadsector:
 		jsr resetsd
 		jsr resetsdtimeout
 		jmp rs3
@@ -737,19 +718,6 @@ resetsd:
 		;
 		; Reset involves writing $00 and then $01 to $D680, waiting
 		; for bit 0 of $D680 to clear.
-
-		lda #$04
-		jsr checkpoint
-;		inc $d021
-		; XXX LDZ $D680 doesn't work here!
-		; some sort of CPU bug?
-		ldz $d680
-		nop
-		nop
-		nop
-;		dec $d021
-		nop
-		jsr printhex
 
 		; try SDHC mode first
 ;		lda #$41
@@ -768,11 +736,6 @@ sdresetsequence:
 		lda #$00
 		sta $d680		
 
-		lda #$05
-		jsr checkpoint
-		ldz $d680
-		jsr printhex
-
 rs1:            
 		jsr checksdtimeout
 		bcc sdresettimedout
@@ -781,11 +744,6 @@ rs1:
 		lda $d680
 		and #$01
 		bne rs1
-
-		lda #$01
-		jsr checkpoint
-		ldz $d680
-		jsr printhex
 
 		jsr resetsdtimeout
 		lda #$01
@@ -796,11 +754,6 @@ rs2:
 		lda $d680
 		and #$01
 		bne rs2
-
-		lda #$02
-		jsr checkpoint
-		ldz $d680
-		jsr printhex
 
 		; reset succeeded
 resetsdok:	jsr canceltimer
@@ -1221,7 +1174,7 @@ nmi_entry:	rti
 ; IRQ is used for SD card timeouts
 irq_entry:	pha
 		php
-		inc $d020
+;		inc $d020
 		inc $d019
 		inc timerticks
 		plp
