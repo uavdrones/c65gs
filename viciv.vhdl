@@ -74,7 +74,8 @@ entity viciv is
     colour_ram_fastio_rdata : out unsigned(7 downto 0);
     colour_ram_cs : in std_logic;
 
-    viciii_io_mode : out std_logic_vector(1 downto 0) := "00";
+    -- power on with enhanced IO on.
+    viciii_io_mode : out std_logic_vector(1 downto 0) := "11";
     colourram_at_dc00 : out std_logic := '0'
     );
 end viciv;
