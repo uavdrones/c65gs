@@ -121,11 +121,11 @@ begin  -- behavioural
 
   sector0: ram8x512
     port map (
-      clka  => cpuclock,
+      clka  => clock,
       wea   => sector_buffer_we,
-      addra => sector_buffer_address,
+      addra => std_logic_vector(sector_buffer_address),
       dina => std_logic_vector(sector_buffer_wdata),
-      douta => sector_buffer_rdata);
+      unsigned(douta) => sector_buffer_rdata);
   
   sd0: sd_controller 
     port map (
@@ -278,7 +278,7 @@ begin  -- behavioural
         if fastio_read='0' and fastio_write='1' and sdio_busy='0' then
           sector_buffer_address <= fastio_addr(8 downto 0);
           sector_buffer_wdata <= fastio_wdata;
-          sector_buffer_wea(0) <= '1';
+          sector_buffer_we(0) <= '1';
         end if;
       end if;
     end write_to_registers;
@@ -442,7 +442,7 @@ begin  -- behavioural
   begin
 
     if rising_edge(clock) then      
-      sector_buffer_wea(0) <= '0';
+      sector_buffer_we(0) <= '0';
       
       -- De-map sector buffer if VIC-IV maps colour RAM at $DC00
       sector_buffer_mapped <= sector_buffer_mapped and (not colourram_at_dc00);
