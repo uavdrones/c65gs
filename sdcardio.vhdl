@@ -478,7 +478,7 @@ begin  -- behavioural
           if data_ready='1' then
             sd_doread <= '0';
             -- A byte is ready to read, so store it
-            sector_buffer_address <= sector_offset;
+            sector_buffer_address <= sector_offset(8 downto 0);
             sector_buffer_we(0) <= '1';
             sector_buffer_wdata <= unsigned(sd_rdata);
             sd_state <= ReadingSectorAckByte;
