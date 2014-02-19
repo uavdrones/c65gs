@@ -355,16 +355,6 @@ l16:		lda $DE2C,x
 		; C65GS.ROM
 searchdirectorysector:
 		ldz #$00
-
-		ldy #$00
-l29:		lda $DE00,y
-		cmp #$40
-		bcc l30
-		and #$1f
-l30:		sta $0608,y
-		iny
-		bne l29
-
 l19b:		
 		ldy #$00
 l18b:		
@@ -373,6 +363,10 @@ l17b:		lda $DE00,y
 		jsr toupper
 		cmp txt_c65gsrom,x
 		bne notthisentry
+		cmp #$40
+		bcc l17c
+		and #$1f
+l17c:		sta $0428,x
 		iny
 		inx
 		cpx #$0b
@@ -676,9 +670,7 @@ rs4:
 rs3:		
 		jsr checksdtimeout
 		bcc rereadsector
-		inc $0702
 		lda $d680
-		sta $0700
 		and #$01
 		bne rs3
 
