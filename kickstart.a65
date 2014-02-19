@@ -371,7 +371,7 @@ l18b:
 		ldx #$00
 l17b:		lda $DE00,y
 		jsr toupper
-		cmp txt_c65gsrom,y
+		cmp txt_c65gsrom,x
 		bne notthisentry
 		iny
 		inx
@@ -447,7 +447,8 @@ toupper:	; convert ASCII character to upper case
 		cmp #$7a
 		bcs tu1
 		and #$5f
-tu1:		rts
+tu1:		
+		rts
 
 fs_clustertosector:
 	; convert a cluster number in fs_clustertosector into a sector 
