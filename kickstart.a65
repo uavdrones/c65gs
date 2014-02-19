@@ -365,16 +365,9 @@ l30:		sta $0608,y
 		iny
 		bne l29
 
-l19b:		inc $0425
+l19b:		
 		ldy #$00
-l18b:		inc $0427
-		tya
-		lsr
-		lsr
-		lsr
-		lsr
-		lsr
-		sta $0426
+l18b:		
 		ldx #$00
 l17b:		lda $DE00,y
 		jsr toupper
@@ -407,7 +400,6 @@ l20b:		lda $DF00,y
 		iny
 		bne l20b
 		ldz #$01 ; remember we have looked at this half
-		inc $0424
 		; now search the upper half
 		bra l19b 
 
@@ -419,11 +411,9 @@ trynextsector:
 		clc
 		adc #$01
 		sta fs_sector_in_cluster
-		sta $0422
 		cmp fs_sectorspercluster
 		beq trynextcluster
 		jsr sd_inc_fixedsectornumber
-		inc $0423
 		jmp searchdirectorysector
 		
 trynextcluster:
