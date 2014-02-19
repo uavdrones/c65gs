@@ -59,10 +59,6 @@
 
 reset_entry:
 
-		lda #$81
-		sta $D680
-		lda $DE00
-
 		; get CPU state sensible
 		sei
 		cld
@@ -70,7 +66,6 @@ reset_entry:
 		ldx #$ff
 		txs
 		
-
 		; We DO NOT need to mess with $01, because
 		; the 4510 starts up with kickstart mapped at $E000, 
 		; standard ($FFD0xxx) IO page mapped at $D000,
@@ -574,6 +569,8 @@ readmbr:
 l7:		
 		lda #$03
 		jsr checkpoint
+		ldz $d680
+		jsr printhex
 
 		; MBR is sector 0	
 		lda #$00
@@ -685,6 +682,11 @@ r1:		inz
 		inx
 		bne r1
 rs4:
+		lda #$06
+		jsr checkpoint
+		ldz $d680
+		jsr printhex
+
 		; ask for sector to be read
 		lda #$02
 		sta $d680
@@ -693,11 +695,17 @@ rs4:
 		jsr resetsdtimeout
 		lda #$04
 		sta timerlimit
-rs3:		jsr checksdtimeout
+rs3:		
+		jsr checksdtimeout
 		bcc rereadsector
+		inc $0702
 		lda $d680
+		sta $0700
 		and #$01
 		bne rs3
+		
+		lda #$07
+		jsr checkpoint
 
 		; check that we read 512 bytes
 		lda $d689
@@ -709,7 +717,11 @@ rs3:		jsr checksdtimeout
 		rts
 
 		; reset sd card and try again
-rereadsector:   jsr resetsd
+rereadsector:   		
+		lda #$08
+		jsr checkpoint
+
+		jsr resetsd
 		jsr resetsdtimeout
 		jmp rs3
 
@@ -772,6 +784,8 @@ rs1:
 
 		lda #$01
 		jsr checkpoint
+		ldz $d680
+		jsr printhex
 
 		jsr resetsdtimeout
 		lda #$01
@@ -785,6 +799,8 @@ rs2:
 
 		lda #$02
 		jsr checkpoint
+		ldz $d680
+		jsr printhex
 
 		; reset succeeded
 resetsdok:	jsr canceltimer
@@ -798,7 +814,7 @@ sdresettimedout: ; reset failed
 
 canceltimer:
 	lda #$00
-	sta $dc0d
+	sta $d01a
 	sei
 	rts
 
@@ -808,26 +824,19 @@ resetsdtimeout:
 
 	sei
 
-        lda #$95
-	sta $dc04
-	lda #$42
-	sta $dc05
-
-	lda #$81
-	sta $dc0d
-	lda $dc0e
-	and #$80
-	ora #$11
-	sta $dc0e
+	; clear bit 8 of raster compare
+	lda #$7f
+	and $D011
+	sta $D011
+	; set raster for split
+	lda #$80
+	sta $D012
+	; enable raster IRQ
+	lda #$01
+	sta $D01A
 
 	lda #$00
 	sta timerticks
-
-	; XXX only needed during testing 
-	lda #<sdtimerirq
-	sta $0314
-	lda #>sdtimerirq
-	sta $0315
 
 	cli
 
@@ -839,12 +848,6 @@ checksdtimeout:
 	lda timerlimit 
 	cmp timerticks       
 	rts
-
-; XXX only needed during testing
-sdtimerirq:
-	lda $dc0d
-	inc timerticks
-	jmp $ea81
 
 ;;; ----------------------------------------------------------------------------
 ;;; ROM loading and manipulation routines
@@ -1219,7 +1222,7 @@ nmi_entry:	rti
 irq_entry:	pha
 		php
 		inc $d020
-		lda $DC0D
+		inc $d019
 		inc timerticks
 		plp
 		pla
