@@ -185,14 +185,15 @@ architecture Behavioral of machine is
       ---------------------------------------------------------------------------
       -- fast IO port (clocked at core clock). 1MB address space
       ---------------------------------------------------------------------------
-      fastio_addr : inout std_logic_vector(19 downto 0);
+      fastio_addr : inout unsigned(19 downto 0);
       fastio_read : inout std_logic;
       fastio_write : out std_logic;
-      fastio_wdata : out std_logic_vector(7 downto 0);
-      fastio_rdata : inout std_logic_vector(7 downto 0);
-      fastio_vic_rdata : in std_logic_vector(7 downto 0);
-      fastio_kickstart_rdata : in std_logic_vector(7 downto 0);
-      fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
+      fastio_wdata : out unsigned(7 downto 0);
+      fastio_rdata : inout unsigned(7 downto 0);
+      fastio_vic_rdata : in unsigned(7 downto 0);
+      fastio_kickstart_rdata : in unsigned(7 downto 0);
+      fastio_sectorbuffer_rdata : in unsigned(7 downto 0);
+      fastio_colour_ram_rdata : in unsigned(7 downto 0);
       colour_ram_cs : out std_logic;
 
       viciii_io_mode : in std_logic_vector(1 downto 0);
@@ -230,12 +231,12 @@ architecture Behavioral of machine is
       -----------------------------------------------------------------------------
       -- FastIO interface for accessing video registers
       -----------------------------------------------------------------------------
-      fastio_addr : in std_logic_vector(19 downto 0);
+      fastio_addr : in unsigned(19 downto 0);
       fastio_read : in std_logic;
       fastio_write : in std_logic;
-      fastio_wdata : in std_logic_vector(7 downto 0);
-      fastio_rdata : out std_logic_vector(7 downto 0);
-      colour_ram_fastio_rdata : out std_logic_vector(7 downto 0);
+      fastio_wdata : in unsigned(7 downto 0);
+      fastio_rdata : out unsigned(7 downto 0);
+      colour_ram_fastio_rdata : out unsigned(7 downto 0);
       colour_ram_cs : in std_logic;
 
       viciii_io_mode : out std_logic_vector(1 downto 0);
@@ -250,12 +251,13 @@ architecture Behavioral of machine is
           reset : in std_logic;
           irq : out std_logic;
           nmi : out std_logic;
-          address : in std_logic_vector(19 downto 0);
+          address : in unsigned(19 downto 0);
           r : in std_logic;
           w : in std_logic;
-          data_i : in std_logic_vector(7 downto 0);
-          data_o : out std_logic_vector(7 downto 0);
-          kickstart_o : out std_logic_vector(7 downto 0);
+          data_i : in unsigned(7 downto 0);
+          data_o : out unsigned(7 downto 0);
+          kickstart_o : out unsigned(7 downto 0);
+          sectorbuffer_o : inout unsigned(7 downto 0);
           colourram_at_dc00 : in std_logic;
 
           seg_led : out unsigned(31 downto 0);
@@ -281,14 +283,15 @@ architecture Behavioral of machine is
   signal combinedirq : std_logic;
   signal combinednmi : std_logic;
 
-  signal fastio_addr : std_logic_vector(19 downto 0);
+  signal fastio_addr : unsigned(19 downto 0);
   signal fastio_read : std_logic;
   signal fastio_write : std_logic;
-  signal fastio_wdata : std_logic_vector(7 downto 0);
-  signal fastio_rdata : std_logic_vector(7 downto 0);
-  signal fastio_vic_rdata : std_logic_vector(7 downto 0);
-  signal fastio_kickstart_rdata : std_logic_vector(7 downto 0);
-  signal colour_ram_fastio_rdata : std_logic_vector(7 downto 0);
+  signal fastio_wdata : unsigned(7 downto 0);
+  signal fastio_rdata : unsigned(7 downto 0);
+  signal fastio_vic_rdata : unsigned(7 downto 0);
+  signal fastio_kickstart_rdata : unsigned(7 downto 0);
+  signal fastio_sectorbuffer_rdata : unsigned(7 downto 0);
+  signal colour_ram_fastio_rdata : unsigned(7 downto 0);
 
   signal fastram_we : STD_LOGIC_VECTOR(7 DOWNTO 0);
   signal fastram_address : STD_LOGIC_VECTOR(13 DOWNTO 0);
@@ -507,6 +510,7 @@ begin
     fastio_rdata => fastio_rdata,
     fastio_vic_rdata => fastio_vic_rdata,
     fastio_kickstart_rdata => fastio_kickstart_rdata,
+    fastio_sectorbuffer_rdata => fastio_sectorbuffer_rdata,
     fastio_colour_ram_rdata => colour_ram_fastio_rdata,
     colour_ram_cs => colour_ram_cs,
 
@@ -556,6 +560,7 @@ begin
     data_i => fastio_wdata,
     data_o => fastio_rdata,
     kickstart_o => fastio_kickstart_rdata,
+    sectorbuffer_o => fastio_sectorbuffer_rdata,
     colourram_at_dc00 => colourram_at_dc00,
     seg_led => seg_led_data,
 

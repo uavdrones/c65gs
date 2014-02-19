@@ -86,14 +86,15 @@ entity gs4510 is
     ---------------------------------------------------------------------------
     -- fast IO port (clocked at core clock). 1MB address space
     ---------------------------------------------------------------------------
-    fastio_addr : inout std_logic_vector(19 downto 0);
+    fastio_addr : inout unsigned(19 downto 0);
     fastio_read : inout std_logic;
     fastio_write : out std_logic;
-    fastio_wdata : out std_logic_vector(7 downto 0);
-    fastio_rdata : inout std_logic_vector(7 downto 0);
-    fastio_vic_rdata : in std_logic_vector(7 downto 0);
-    fastio_kickstart_rdata : in std_logic_vector(7 downto 0);
-    fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
+    fastio_wdata : out unsigned(7 downto 0);
+    fastio_rdata : inout unsigned(7 downto 0);
+    fastio_vic_rdata : in unsigned(7 downto 0);
+    fastio_kickstart_rdata : in unsigned(7 downto 0);
+    fastio_sectorbuffer_rdata : in unsigned(7 downto 0);
+    fastio_colour_ram_rdata : in unsigned(7 downto 0);
     colour_ram_cs : out std_logic;
 
     viciii_io_mode : in std_logic_vector(1 downto 0);
@@ -106,25 +107,8 @@ architecture Behavioural of gs4510 is
 
   -- Force mapping of kickstart ROM @ E000
   signal kickstart_on : std_logic := '1';
-  
-  -- i-cache control lines
-  signal icache_delay : std_logic;
-  signal accessing_icache : std_logic;
-
-  signal icache_00_address : unsigned(7 downto 0);
-  signal icache_00_wdata : unsigned(31 downto 0);
-  signal icache_00_write : std_logic;
-  signal icache_01_address : unsigned(7 downto 0);
-  signal icache_01_wdata : unsigned(31 downto 0);
-  signal icache_01_write : std_logic;
-  signal icache_10_address : unsigned(7 downto 0);
-  signal icache_10_wdata : unsigned(31 downto 0);
-  signal icache_10_write : std_logic;
-  signal icache_11_address : unsigned(7 downto 0);
-  signal icache_11_wdata : unsigned(31 downto 0);
-  signal icache_11_write : std_logic;
-  
-  signal last_fastio_addr : std_logic_vector(19 downto 0);
+    
+  signal last_fastio_addr : unsigned(19 downto 0);
 
   signal slowram_lohi : std_logic;
   signal slowram_counter : unsigned(7 downto 0);
@@ -316,6 +300,7 @@ architecture Behavioural of gs4510 is
   signal accessing_fastio : std_logic;
   signal accessing_vic_fastio : std_logic;
   signal accessing_kickstart_fastio : std_logic;
+  signal accessing_sectorbuffer_fastio : std_logic;
   signal accessing_colour_ram_fastio : std_logic;
   signal accessing_ram : std_logic;
   signal accessing_slowram : std_logic;
@@ -479,29 +464,29 @@ begin
     -- XXX Schedule reading from all four i-cache files
     -- (uses less logic than picking only one)
     -- XXX i-cache not implemented.
-    accessing_icache <= '0';
+    -- accessing_icache <= '0';
   end ready_for_next_instruction;
 
   -- purpose: invalidate cache lines corresponding to a memory write
-  procedure icache_invalidate (
-    long_address : in unsigned(27 downto 0)) is
-  begin  -- icache_invalidate
-    case long_address(1 downto 0) is
-      when "00" => icache_00_address <= long_address(9 downto 2);
-                   icache_00_wdata <= (others => '0');
-                   icache_00_write <= '1';
-      when "01" => icache_01_address <= long_address(9 downto 2);
-                   icache_01_wdata <= (others => '0');
-                   icache_01_write <= '1';
-      when "10" => icache_10_address <= long_address(9 downto 2);
-                   icache_10_wdata <= (others => '0');
-                   icache_10_write <= '1';
-      when "11" => icache_11_address <= long_address(9 downto 2);
-                   icache_11_wdata <= (others => '0');
-                   icache_11_write <= '1';
-      when others => null;
-    end case;
-  end icache_invalidate;
+  --procedure icache_invalidate (
+  --  long_address : in unsigned(27 downto 0)) is
+  --begin  -- icache_invalidate
+  --  case long_address(1 downto 0) is
+  --    when "00" => icache_00_address <= long_address(9 downto 2);
+  --                 icache_00_wdata <= (others => '0');
+  --                 icache_00_write <= '1';
+  --    when "01" => icache_01_address <= long_address(9 downto 2);
+  --                 icache_01_wdata <= (others => '0');
+  --                 icache_01_write <= '1';
+  --    when "10" => icache_10_address <= long_address(9 downto 2);
+  --                 icache_10_wdata <= (others => '0');
+  --                 icache_10_write <= '1';
+  --    when "11" => icache_11_address <= long_address(9 downto 2);
+  --                 icache_11_wdata <= (others => '0');
+  --                 icache_11_write <= '1';
+  --    when others => null;
+  --  end case;
+  --end icache_invalidate;
   
   procedure read_long_address(
     long_address : in unsigned(27 downto 0);
@@ -511,6 +496,7 @@ begin
     accessing_ram <= '0'; accessing_slowram <= '0';
     accessing_fastio <= '0'; accessing_vic_fastio <= '0';
     accessing_kickstart_fastio <= '0';
+    accessing_sectorbuffer_fastio <= '0';
     accessing_colour_ram_fastio <= '0';
     accessing_cpuport <= '0';
     
@@ -574,10 +560,15 @@ begin
               accessing_colour_ram_fastio <= '1';            
             end if;
           end if;
+          report "considering sd sector buffer read: colourram_at_dc00=" & std_logic'image(colourram_at_dc00) & ", addr=$" & to_string(std_logic_vector(long_address(11 downto 9))) severity note;
+          if (long_address(11 downto 9)="111") and (colourram_at_dc00='0') then
+            report "DE00-DFFF SD sector buffer access from VIC fastio" severity note;
+            accessing_sectorbuffer_fastio <= '1';            
+          end if;                       -- $DE00-$DFFF
         end if;                         -- $D{0,1,2,3}XXX
       end if;                           -- $DXXXX
-      fastio_addr <= std_logic_vector(long_address(19 downto 0));
-      last_fastio_addr <= std_logic_vector(long_address(19 downto 0));
+      fastio_addr <= long_address(19 downto 0);
+      last_fastio_addr <= long_address(19 downto 0);
       fastio_read <= '1';
       -- XXX Some fastio (that referencing dual-port block rams) does require
       -- a wait state.  For now, just apply the wait state to all fastio
@@ -653,17 +644,17 @@ begin
 
     -- Tell i-cache that memory map is changing if we touch $D030
     -- (VIC-III ROM banking register)
-    if (long_address = x"FFD0030") or (long_address = x"FFD1030") or
-      (long_address = x"FFD2030") or (long_address = x"FFD3030") then
-      icache_delay <= '1';
-    end if;
+    --if (long_address = x"FFD0030") or (long_address = x"FFD1030") or
+    --  (long_address = x"FFD2030") or (long_address = x"FFD3030") then
+    --  icache_delay <= '1';
+    --end if;
 
     -- Invalidate i-cache lines corresponding to the address we are writing to.
     -- As cache lines hold bytes n,n+1 and n+2, we need to erase the cache lines
     -- corresponding to long_address-2 through long_address inclusive
-    icache_invalidate(long_address);
-    icache_invalidate(long_address-1);
-    icache_invalidate(long_address-2);
+    --icache_invalidate(long_address);
+    --icache_invalidate(long_address-1);
+    --icache_invalidate(long_address-2);
     
     accessing_ram <= '0'; accessing_slowram <= '0';
     accessing_fastio <= '0'; accessing_cpuport <= '0';
@@ -725,10 +716,10 @@ begin
       state <= SlowRamWrite1;
     elsif long_address(27 downto 24) = x"F" then
       accessing_fastio <= '1';
-      fastio_addr <= std_logic_vector(long_address(19 downto 0));
-      last_fastio_addr <= std_logic_vector(long_address(19 downto 0));
+      fastio_addr <= long_address(19 downto 0);
+      last_fastio_addr <= long_address(19 downto 0);
       fastio_write <= '1';
-      fastio_wdata <= std_logic_vector(value);
+      fastio_wdata <= value;
       if long_address = x"FFC00A0" then
         slowram_waitstates <= value;
       end if;
@@ -764,7 +755,7 @@ begin
       -- Setting the CPU DDR is simple, and has no real side effects.
       -- All 8 bits can be written to.
       cpuport_ddr <= value;
-      icache_delay <= '1';
+      --icache_delay <= '1';
       if next_state = InstructionFetch then
         ready_for_next_instruction(reg_pc);
       else
@@ -774,7 +765,7 @@ begin
       -- For CPU port, things get more interesting.
       -- Bits 6 & 7 cannot be altered, and always read 0.
       cpuport_value(5 downto 0) <= value(5 downto 0);
-      icache_delay <= '1';
+      --icache_delay <= '1';
       if next_state = InstructionFetch then
         ready_for_next_instruction(reg_pc);
       else
@@ -847,6 +838,9 @@ begin
     elsif accessing_kickstart_fastio='1' then 
       report "reading kickstart fastio byte $" & to_hstring(fastio_kickstart_rdata) severity note;
       return unsigned(fastio_kickstart_rdata);
+    elsif accessing_sectorbuffer_fastio='1' then 
+      report "reading sectorbuffer fastio byte $" & to_hstring(fastio_sectorbuffer_rdata) severity note;
+      return unsigned(fastio_sectorbuffer_rdata);
     elsif accessing_vic_fastio='1' then 
       report "reading VIC fastio byte $" & to_hstring(fastio_vic_rdata) severity note;
       return unsigned(fastio_vic_rdata);
@@ -1013,7 +1007,7 @@ begin
           -- XXX Implement MAP instruction
           c65_map_instruction;
           map_interrupt_inhibit <= '1';
-          icache_delay <= '1';
+          --icache_delay <= '1';
         when I_NEG => reg_a <= with_nz((not reg_a) + 1);
         when I_PHA => push_byte(reg_a,InstructionFetch);
         when I_PHX => push_byte(reg_x,InstructionFetch);
@@ -1425,9 +1419,9 @@ begin
       fastram_datain <= x"d0d1d2d3d4d5d6d7";
 
       -- By default don't wait an extra cycle before reading the cache
-      icache_delay <= '0';
-      -- By default we are not reading from the cache
-      accessing_icache <= '0';
+      --icache_delay <= '0';
+      ---- By default we are not reading from the cache
+      --accessing_icache <= '0';
       
       -- Generate virtual processor status register for convenience
       virtual_reg_p(7) := flag_n;
@@ -1763,9 +1757,9 @@ begin
         when others => value := x"F00D";
       end case;
       if lohi='0' then
-        fastio_rdata <= std_logic_vector(value(7 downto 0));
+        fastio_rdata <= value(7 downto 0);
       else
-        fastio_rdata <= std_logic_vector(value(15 downto 8));
+        fastio_rdata <= value(15 downto 8);
       end if;
     else
       fastio_rdata <= (others => 'Z');

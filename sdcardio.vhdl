@@ -19,6 +19,7 @@ entity sdcardio is
     fastio_read : in std_logic;
     fastio_wdata : in unsigned(7 downto 0);
     fastio_rdata : out unsigned(7 downto 0);
+    fastio_sectorbuffer_rdata : inout unsigned(7 downto 0);
 
     colourram_at_dc00 : in std_logic;
 
@@ -36,13 +37,13 @@ architecture behavioural of sdcardio is
 
   component sectorbuffer is
   port (Clk : in std_logic;
-        address : in std_logic_vector(8 downto 0);
+        address : in unsigned(8 downto 0);
         we : in std_logic;
         cs : in std_logic;
         oe : in std_logic;
-        data_i : in std_logic_vector(7 downto 0);
-        data_o : out std_logic_vector(7 downto 0);
-        data_o_always : out std_logic_vector(7 downto 0)
+        data_i : in unsigned(7 downto 0);
+        data_o : out unsigned(7 downto 0);
+        data_o_always : out unsigned(7 downto 0)
         );
   end component;
 
@@ -77,7 +78,6 @@ architecture behavioural of sdcardio is
   signal sd_sector       : std_logic_vector(31 downto 0) := (others => '0');
   signal sd_datatoken    : unsigned(7 downto 0);
   signal sd_rdata        : std_logic_vector(7 downto 0);
-  signal sd_wdata        : std_logic_vector(7 downto 0) := (others => '0');
   signal sd_error        : std_logic;
   signal sd_reset        : std_logic := '1';
   signal sdhc_mode : std_logic := '0';
@@ -124,10 +124,10 @@ begin  -- behavioural
       we   => sector_buffer_we,
       cs   => sector_buffer_cs,
       oe   => sector_buffer_oe,
-      address => std_logic_vector(sector_buffer_address),
-      data_i => std_logic_vector(sector_buffer_wdata),
-      unsigned(data_o) => fastio_rdata,
-      data_o_always => sd_wdata);
+      address => sector_buffer_address,
+      data_i => sector_buffer_wdata,
+      data_o => fastio_rdata,
+      data_o_always => fastio_sectorbuffer_rdata);
   
   sd0: sd_controller 
     port map (
@@ -143,7 +143,7 @@ begin  -- behavioural
       dm_in => '1',	-- data mode, 0 = write continuously, 1 = write single block
       reset => sd_reset,
       data_ready => data_ready,
-      din => sd_wdata,
+      din => std_logic_vector(fastio_sectorbuffer_rdata),
       dout => sd_rdata,
       clk => clock	-- twice the SPI clk.  XXX Cannot exceed 50MHz
       );
@@ -449,9 +449,18 @@ begin  -- behavioural
     end read_from_registers;
     
   begin
+    if rising_edge(clock) then
+      if fastio_read='1' and fastio_write='0' then
+        report "fastio read detected" severity note;
+        sector_buffer_we <= '0';
+        read_from_registers;
+      else
+        fastio_rdata <= (others => 'Z');
+        sector_buffer_we <= '0';
+        sector_buffer_oe <= '0';
+        sector_buffer_cs <= '0';
+      end if;
 
-    report "clock=" & std_logic'image(clock) & ", write=" & std_logic'image(fastio_write) severity note;
-    if rising_edge(clock) then      
       -- De-map sector buffer if VIC-IV maps colour RAM at $DC00
       sector_buffer_mapped <= sector_buffer_mapped and (not colourram_at_dc00);
       
@@ -459,12 +468,6 @@ begin  -- behavioural
         write_to_registers;
       end if;
     end if;                             -- rising_edge(clock)
-
-    fastio_rdata <= (others => 'Z');
-    if fastio_read='1' and fastio_write='0' and rising_edge(clock) then
-      report "fastio read detected" severity note;
-      read_from_registers;
-    end if;
     
     -- SD controller state machine
     if rising_edge(clock) then

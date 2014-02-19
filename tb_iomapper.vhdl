@@ -149,6 +149,17 @@ begin
     r <= '1'; w <= '0'; address <= x"D3E00";
     tick;
     report "Frist byte of sector buffer = $" & to_hstring(data_o) severity note;
+    r <= '1'; w <= '0'; address <= x"D3E01";
+    tick;
+    report "Second byte of sector buffer = $" & to_hstring(data_o) severity note;
+    r <= '0'; w <= '1'; address <= x"D3E00"; data_i <= x"AA";
+    tick;
+    r <= '1'; w <= '0'; address <= x"D3E00";
+    tick;
+    report "Frist byte of sector buffer after write = $" & to_hstring(data_o) severity note;
+    r <= '1'; w <= '0'; address <= x"D3E01";
+    tick;
+    report "Second byte of sector buffer = $" & to_hstring(data_o) severity note;
     
     assert false report "End of simulation" severity failure;
   end process;

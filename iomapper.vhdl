@@ -12,12 +12,13 @@ entity iomapper is
         reset : in std_logic;
         irq : out std_logic;
         nmi : out std_logic;
-        address : in std_logic_vector(19 downto 0);
+        address : in unsigned(19 downto 0);
         r : in std_logic;
         w : in std_logic;
-        data_i : in std_logic_vector(7 downto 0);
-        data_o : out std_logic_vector(7 downto 0);
-        kickstart_o : out std_logic_vector(7 downto 0);
+        data_i : in unsigned(7 downto 0);
+        data_o : out unsigned(7 downto 0);
+        kickstart_o : out unsigned(7 downto 0);
+        sectorbuffer_o : inout unsigned(7 downto 0);
 
         ps2data : in std_logic;
         ps2clock : in std_logic;
@@ -60,7 +61,8 @@ architecture behavioral of iomapper is
       fastio_write : in std_logic;
       fastio_wdata : in unsigned(7 downto 0);
       fastio_rdata : out unsigned(7 downto 0);
-
+      fastio_sectorbuffer_rdata : inout unsigned(7 downto 0);
+      
       -------------------------------------------------------------------------
       -- Lines for the SDcard interface itself
       -------------------------------------------------------------------------
@@ -85,7 +87,8 @@ architecture behavioral of iomapper is
       fastio_write : in std_logic;
       fastio_wdata : in unsigned(7 downto 0);
       fastio_rdata : out unsigned(7 downto 0);
-
+      fastio_sectorbuffer_rdata : inout unsigned(7 downto 0);
+      
       -- If colour RAM is mapped at $DC00-$DFFF, then don't map sector buffer
       colourram_at_dc00 : in std_logic;
 
@@ -167,11 +170,11 @@ architecture behavioral of iomapper is
 begin         
   kickstartrom : kickstart port map (
     clk     => clk,
-    address => address(12 downto 0),
+    address => std_logic_vector(address(12 downto 0)),
     we      => w,
     cs      => kickstartcs,
-    data_i  => data_i,
-    data_o  => kickstart_o);
+    data_i  => std_logic_vector(data_i),
+    unsigned(data_o)  => kickstart_o);
 
   cia1: cia6526 port map (
     cpuclock => clk,
@@ -183,8 +186,8 @@ begin
     seg_led => seg_led,
     fastio_addr => unsigned(address(7 downto 0)),
     fastio_write => w,
-    std_logic_vector(fastio_rdata) => data_o,
-    fastio_wdata => unsigned(data_i),
+    fastio_rdata => data_o,
+    fastio_wdata => data_i,
 
     portaout => cia1porta_out,
     portbout => cia1portb_out,
@@ -204,8 +207,8 @@ begin
     cs => cia2cs,
     fastio_addr => unsigned(address(7 downto 0)),
     fastio_write => w,
-    std_logic_vector(fastio_rdata) => data_o,
-    fastio_wdata => unsigned(data_i),
+    fastio_rdata => data_o,
+    fastio_wdata => data_i,
 
     -- CIA ports not connected by default
     portbin => x"20",
@@ -228,11 +231,12 @@ begin
     clock => clk,
     reset => reset,
 
-    fastio_addr => unsigned(address),
+    fastio_addr => address,
     fastio_write => w,
     fastio_read => r,
-    fastio_wdata => unsigned(data_i),
-    std_logic_vector(fastio_rdata) => data_o,
+    fastio_wdata => data_i,
+    fastio_rdata => data_o,
+    fastio_sectorbuffer_rdata => sectorbuffer_o,
     colourram_at_dc00 => colourram_at_dc00,
 
     cs_bo => cs_bo,
@@ -257,13 +261,15 @@ begin
   --  miso_i => miso_i
   --  );
 
-  process (r,w,address,colourram_at_dc00)
+  process (r,w,address,colourram_at_dc00,sectorbuffer_o)
   begin  -- process
 
     cia1cs <= '0';
     cia2cs <= '0';
     sdcardcs <='0';
     kickstartcs <= '0';
+
+    report "sectorbuffer_o = $" & to_hstring(sectorbuffer_o) severity note;
 
     if (r='1') or (w='1') then
       -- kickstart ROM

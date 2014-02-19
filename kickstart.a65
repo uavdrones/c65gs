@@ -59,6 +59,10 @@
 
 reset_entry:
 
+		lda #$81
+		sta $D680
+		lda $DE00
+
 		; get CPU state sensible
 		sei
 		cld

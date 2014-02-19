@@ -66,16 +66,16 @@ entity viciv is
     -----------------------------------------------------------------------------
     -- FastIO interface for accessing video registers
     -----------------------------------------------------------------------------
-    fastio_addr : in std_logic_vector(19 downto 0);
+    fastio_addr : in unsigned(19 downto 0);
     fastio_read : in std_logic;
     fastio_write : in std_logic;
-    fastio_wdata : in std_logic_vector(7 downto 0);
-    fastio_rdata : out std_logic_vector(7 downto 0);
-    colour_ram_fastio_rdata : out std_logic_vector(7 downto 0);
+    fastio_wdata : in unsigned(7 downto 0);
+    fastio_rdata : out unsigned(7 downto 0);
+    colour_ram_fastio_rdata : out unsigned(7 downto 0);
     colour_ram_cs : in std_logic;
 
     viciii_io_mode : out std_logic_vector(1 downto 0) := "00";
-    colourram_at_dc00 : out std_logic
+    colourram_at_dc00 : out std_logic := '0'
     );
 end viciv;
 
@@ -265,8 +265,8 @@ architecture Behavioral of viciv is
   signal twentyfourlines : std_logic := '0';
   signal thirtyeightcolumns : std_logic := '0';
   signal vicii_raster_compare : unsigned(10 downto 0);
-  signal vicii_x_smoothscroll : std_logic_vector(2 downto 0);
-  signal vicii_y_smoothscroll : std_logic_vector(2 downto 0);
+  signal vicii_x_smoothscroll : unsigned(2 downto 0);
+  signal vicii_y_smoothscroll : unsigned(2 downto 0);
   signal vicii_sprite_enables : std_logic_vector(7 downto 0);
   signal vicii_sprite_xmsbs : std_logic_vector(7 downto 0);
   signal vicii_sprite_x_expand : std_logic_vector(7 downto 0);
@@ -372,13 +372,13 @@ architecture Behavioral of viciv is
   
   -- Interface to character generator rom
   signal charaddress : std_logic_vector(11 downto 0);
-  signal debug_charaddress : std_logic_vector(11 downto 0);
+  signal debug_charaddress : unsigned(11 downto 0);
   signal chardata : std_logic_vector(7 downto 0);
   -- buffer of read data to improve timing
   signal charrow : std_logic_vector(7 downto 0);
   signal charrow_t1 : std_logic_vector(7 downto 0);
   signal charrow_t2 : std_logic_vector(7 downto 0);
-  signal debug_charrow : std_logic_vector(7 downto 0);
+  signal debug_charrow : unsigned(7 downto 0);
 
   -- C65 style 2K colour RAM
   signal colourram_at_dc00_internal : std_logic;
@@ -421,9 +421,9 @@ architecture Behavioral of viciv is
   signal palette_rdata : std_logic_vector(31 downto 0);
 
   -- Palette bank selection registers
-  signal palette_bank_fastio : std_logic_vector(1 downto 0);
-  signal palette_bank_chargen : std_logic_vector(1 downto 0);
-  signal palette_bank_sprites : std_logic_vector(1 downto 0);
+  signal palette_bank_fastio : unsigned(1 downto 0);
+  signal palette_bank_chargen : unsigned(1 downto 0);
+  signal palette_bank_sprites : unsigned(1 downto 0);
   
 begin
 
@@ -434,7 +434,7 @@ begin
       clka => cpuclock,
       wea => fastram_we,
       addra => fastram_address,
-      dina => fastram_datain,
+      dina => std_logic_vector(fastram_datain),
       douta => fastram_dataout,
       -- video controller use port b of the dual-port fast ram.
       -- The CPU uses port a
@@ -451,8 +451,8 @@ begin
       ena => colour_ram_cs,
       wea(0) => fastio_write,
       addra => colour_ram_fastio_address,
-      dina => fastio_wdata,
-      douta => colour_ram_fastio_rdata,
+      dina => std_logic_vector(fastio_wdata),
+      unsigned(douta) => colour_ram_fastio_rdata,
       -- video controller use port b of the dual-port colour ram.
       -- The CPU uses port a via the fastio interface
       clkb => pixelclock,
@@ -468,10 +468,10 @@ begin
       ena => '1',
       wea => palette_we,
       addra => palette_fastio_address,
-      dina(31 downto 24) => fastio_wdata,
-      dina(23 downto 16) => fastio_wdata,
-      dina(15 downto 8) => fastio_wdata,
-      dina(7 downto 0) => fastio_wdata,
+      dina(31 downto 24) => std_logic_vector(fastio_wdata),
+      dina(23 downto 16) => std_logic_vector(fastio_wdata),
+      dina(15 downto 8) => std_logic_vector(fastio_wdata),
+      dina(7 downto 0) => std_logic_vector(fastio_wdata),
       douta => palette_fastio_rdata,
       clkb => pixelclock,
       web => (others => '0'),
@@ -560,16 +560,16 @@ begin
       or register_bank = x"D2" or register_Bank=x"D3" then
       if register_page>=8 and register_page<12 then
                                         -- colour ram read $D800 - $DBFF
-        colour_ram_fastio_address <= "000000" & fastio_addr(9 downto 0);
+        colour_ram_fastio_address <= "000000" & std_logic_vector(fastio_addr(9 downto 0));
       elsif register_page>=12 and register_page<=15 then
                                         -- colour ram read $DC00 - $DFFF
-        colour_ram_fastio_address <= "000001" & fastio_addr(9 downto 0);
+        colour_ram_fastio_address <= "000001" & std_logic_vector(fastio_addr(9 downto 0));
       else
         colour_ram_fastio_address <= (others => '0');
       end if;
     elsif register_bank(7 downto 4)=x"8" then
                                         -- colour RAM all 64KB
-      colour_ram_fastio_address <= fastio_addr(15 downto 0);
+      colour_ram_fastio_address <= std_logic_vector(fastio_addr(15 downto 0));
     end if;
     
     if fastio_read='0' then
@@ -583,28 +583,28 @@ begin
                                         --  severity note;
       if register_number>=0 and register_number<8 then
                                         -- compatibility sprite coordinates
-        fastio_rdata <= std_logic_vector(sprite_x(to_integer(register_num(2 downto 0))));
+        fastio_rdata <= sprite_x(to_integer(register_num(2 downto 0)));
       elsif register_number<16 then
                                         -- compatibility sprite coordinates
-        fastio_rdata <= std_logic_vector(sprite_y(to_integer(register_num(2 downto 0))));
+        fastio_rdata <= sprite_y(to_integer(register_num(2 downto 0)));
       elsif register_number=16 then
                                         -- compatibility sprite x position MSB
-        fastio_rdata <= vicii_sprite_xmsbs;
+        fastio_rdata <= unsigned(vicii_sprite_xmsbs);
       elsif register_number=17 then             -- $D011
         fastio_rdata(7) <= ycounter(10);  -- MSB of raster
         fastio_rdata(6) <= extended_background_mode;
         fastio_rdata(5) <= not text_mode;
         fastio_rdata(4) <= not blank;
         fastio_rdata(3) <= not twentyfourlines;
-        fastio_rdata(2 downto 0) <= vicii_y_smoothscroll;
+        fastio_rdata(2 downto 0) <= unsigned(vicii_y_smoothscroll);
       elsif register_number=18 then          -- $D012 current raster low 8 bits
-        fastio_rdata <= std_logic_vector(ycounter(9 downto 2));
+        fastio_rdata <= ycounter(9 downto 2);
       elsif register_number=19 then          -- $D013 lightpen X (coarse rasterX)
-        fastio_rdata <= std_logic_vector(displayx(11 downto 4));
+        fastio_rdata <= displayx(11 downto 4);
       elsif register_number=20 then          -- $D014 lightpen Y (coarse rasterY)
-        fastio_rdata <= std_logic_vector(displayy(11 downto 4));
+        fastio_rdata <= displayy(11 downto 4);
       elsif register_number=21 then          -- $D015 compatibility sprite enable
-        fastio_rdata <= vicii_sprite_enables;
+        fastio_rdata <= unsigned(vicii_sprite_enables);
       elsif register_number=22 then          -- $D016
         fastio_rdata(7) <= '1';
         fastio_rdata(6) <= '1';
@@ -613,11 +613,11 @@ begin
         fastio_rdata(3) <= not thirtyeightcolumns;
         fastio_rdata(2 downto 0) <= vicii_x_smoothscroll;
       elsif register_number=23 then          -- $D017 compatibility sprite enable
-        fastio_rdata <= vicii_sprite_y_expand;
+        fastio_rdata <= unsigned(vicii_sprite_y_expand);
       elsif register_number=24 then          -- $D018 compatibility RAM addresses
         fastio_rdata <=
-          std_logic_vector(screen_ram_base(13 downto 10))
-          & std_logic_vector(character_set_address(13 downto 10));
+          screen_ram_base(13 downto 10)
+          & character_set_address(13 downto 10);
       elsif register_number=25 then          -- $D019 compatibility IRQ bits
         fastio_rdata(7) <= irq_drive;
         fastio_rdata(6) <= '1';       -- NC
@@ -637,31 +637,31 @@ begin
         fastio_rdata(1) <= mask_colissionspritebitmap;
         fastio_rdata(0) <= mask_raster;
       elsif register_number=27 then          -- $D01B sprite background priorty
-        fastio_rdata <= vicii_sprite_priorty_bits;
+        fastio_rdata <= unsigned(vicii_sprite_priorty_bits);
       elsif register_number=28 then          -- $D01C sprite multicolour
-        fastio_rdata <= vicii_sprite_multicolour_bits;
+        fastio_rdata <= unsigned(vicii_sprite_multicolour_bits);
       elsif register_number=29 then          -- $D01D compatibility sprite enable
-        fastio_rdata <= vicii_sprite_x_expand;
+        fastio_rdata <= unsigned(vicii_sprite_x_expand);
       elsif register_number=30 then          -- $D01E sprite/sprite collissions
-        fastio_rdata <= vicii_sprite_sprite_colissions;          
+        fastio_rdata <= unsigned(vicii_sprite_sprite_colissions);
       elsif register_number=31 then          -- $D01F sprite/sprite collissions
-        fastio_rdata <= vicii_sprite_bitmap_colissions;
+        fastio_rdata <= unsigned(vicii_sprite_bitmap_colissions);
       elsif register_number=32 then
-        fastio_rdata <= std_logic_vector(border_colour);
+        fastio_rdata <= border_colour;
       elsif register_number=33 then
-        fastio_rdata <= std_logic_vector(screen_colour);
+        fastio_rdata <= screen_colour;
       elsif register_number=34 then
-        fastio_rdata <= std_logic_vector(multi1_colour);
+        fastio_rdata <= multi1_colour;
       elsif register_number=35 then
-        fastio_rdata <= std_logic_vector(multi2_colour);
+        fastio_rdata <= multi2_colour;
       elsif register_number=36 then
-        fastio_rdata <= std_logic_vector(multi3_colour);
+        fastio_rdata <= multi3_colour;
       elsif register_number=37 then
-        fastio_rdata <= std_logic_vector(sprite_multi0_colour);
+        fastio_rdata <= sprite_multi0_colour;
       elsif register_number=38 then
-        fastio_rdata <= std_logic_vector(sprite_multi1_colour);
+        fastio_rdata <= sprite_multi1_colour;
       elsif register_number>=39 and register_number<=46 then
-        fastio_rdata <= std_logic_vector(sprite_colours(to_integer(register_number)-39));
+        fastio_rdata <= sprite_colours(to_integer(register_number)-39);
       elsif register_number=48 then
         -- C65 $D030 emulation
         
@@ -713,53 +713,53 @@ begin
         -- $D040 - $D047 DAT memory ports for bitplanes 0 through 7
         
       elsif register_number=64 then
-        fastio_rdata <= std_logic_vector(virtual_row_width(7 downto 0));
+        fastio_rdata <= virtual_row_width(7 downto 0);
       elsif register_number=65 then
-        fastio_rdata <= std_logic_vector(virtual_row_width(15 downto 8));
+        fastio_rdata <= virtual_row_width(15 downto 8);
       elsif register_number=66 then
-        fastio_rdata <= std_logic_vector(chargen_x_scale);
+        fastio_rdata <= chargen_x_scale;
       elsif register_number=67 then
-        fastio_rdata <= std_logic_vector(chargen_y_scale);
+        fastio_rdata <= chargen_y_scale;
       elsif register_number=68 then
-        fastio_rdata <= std_logic_vector(border_x_left(7 downto 0));
+        fastio_rdata <= border_x_left(7 downto 0);
       elsif register_number=69 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(border_x_left(11 downto 8));
+        fastio_rdata(3 downto 0) <= border_x_left(11 downto 8);
       elsif register_number=70 then
-        fastio_rdata <= std_logic_vector(border_x_right(7 downto 0));
+        fastio_rdata <= border_x_right(7 downto 0);
       elsif register_number=71 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(border_x_right(11 downto 8));
+        fastio_rdata(3 downto 0) <= border_x_right(11 downto 8);
       elsif register_number=72 then
-        fastio_rdata <= std_logic_vector(border_y_top(7 downto 0));
+        fastio_rdata <= border_y_top(7 downto 0);
       elsif register_number=73 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(border_y_top(11 downto 8));
+        fastio_rdata(3 downto 0) <= border_y_top(11 downto 8);
       elsif register_number=74 then
-        fastio_rdata <= std_logic_vector(border_y_bottom(7 downto 0));
+        fastio_rdata <= border_y_bottom(7 downto 0);
       elsif register_number=75 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(border_y_bottom(11 downto 8));
+        fastio_rdata(3 downto 0) <= border_y_bottom(11 downto 8);
       elsif register_number=76 then
-        fastio_rdata <= std_logic_vector(x_chargen_start(7 downto 0));
+        fastio_rdata <= x_chargen_start(7 downto 0);
       elsif register_number=77 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(x_chargen_start(11 downto 8));
+        fastio_rdata(3 downto 0) <= x_chargen_start(11 downto 8);
       elsif register_number=78 then
-        fastio_rdata <= std_logic_vector(y_chargen_start(7 downto 0));
+        fastio_rdata <= y_chargen_start(7 downto 0);
       elsif register_number=79 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(y_chargen_start(11 downto 8));
+        fastio_rdata(3 downto 0) <= y_chargen_start(11 downto 8);
       elsif register_number=80 then
-        fastio_rdata <= std_logic_vector(xcounter(7 downto 0));
+        fastio_rdata <= xcounter(7 downto 0);
       elsif register_number=81 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(xcounter(11 downto 8));
+        fastio_rdata(3 downto 0) <= xcounter(11 downto 8);
       elsif register_number=82 then
-        fastio_rdata <= std_logic_vector(ycounter(7 downto 0));
+        fastio_rdata <= ycounter(7 downto 0);
       elsif register_number=83 then
         fastio_rdata(7 downto 3) <= "00000";
-        fastio_rdata(2 downto 0) <= std_logic_vector(ycounter(10 downto 8));
+        fastio_rdata(2 downto 0) <= ycounter(10 downto 8);
       elsif register_number=84 then
                                         -- $D054 (53332) - New mode control register
         fastio_rdata(7 downto 3) <= (others => '1');
@@ -767,9 +767,9 @@ begin
         fastio_rdata(1) <= fullcolour_8bitchars;
         fastio_rdata(0) <= sixteenbit_charset;
       elsif register_number=85 then
-        fastio_rdata <= std_logic_vector(to_unsigned(char_fetch_cycle,8));
+        fastio_rdata <= to_unsigned(char_fetch_cycle,8);
       elsif register_number=86 then
-        fastio_rdata <= std_logic_vector(cycles_to_next_card);
+        fastio_rdata <= cycles_to_next_card;
       elsif register_number=87 then
         fastio_rdata(7) <= xfrontporch;
         fastio_rdata(6) <= xbackporch;
@@ -778,20 +778,20 @@ begin
         fastio_rdata(3) <= chargen_active_soon;
         fastio_rdata(2 downto 0) <= "111";
       elsif register_number=88 then
-        fastio_rdata <= std_logic_vector(card_number(7 downto 0));
+        fastio_rdata <= card_number(7 downto 0);
       elsif register_number=96 then
-        fastio_rdata <= std_logic_vector(screen_ram_base(7 downto 0));
+        fastio_rdata <= screen_ram_base(7 downto 0);
       elsif register_number=97 then
-        fastio_rdata <= std_logic_vector(screen_ram_base(15 downto 8));
+        fastio_rdata <= screen_ram_base(15 downto 8);
       elsif register_number=98 then
-        fastio_rdata <= std_logic_vector(screen_ram_base(23 downto 16));
+        fastio_rdata <= screen_ram_base(23 downto 16);
       elsif register_number=99 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(screen_ram_base(27 downto 24));
+        fastio_rdata(3 downto 0) <= screen_ram_base(27 downto 24);
       elsif register_number=100 then
-        fastio_rdata <= std_logic_vector(colour_ram_base(7 downto 0));
+        fastio_rdata <= colour_ram_base(7 downto 0);
       elsif register_number=101 then
-        fastio_rdata <= std_logic_vector(colour_ram_base(15 downto 8));
+        fastio_rdata <= colour_ram_base(15 downto 8);
       elsif register_number=102 then
         fastio_rdata <= x"00";          -- colour_ram is 64KB block, so no bits
                                         -- 16 to 23
@@ -799,39 +799,42 @@ begin
         fastio_rdata <= x"00";          -- colour_ram is 64KB block, so no bits
                                         -- 24 to 27
       elsif register_number=104 then
-        fastio_rdata <= std_logic_vector(character_set_address(7 downto 0));
+        fastio_rdata <= character_set_address(7 downto 0);
       elsif register_number=105 then
-        fastio_rdata <= std_logic_vector(character_set_address(15 downto 8));
+        fastio_rdata <= character_set_address(15 downto 8);
       elsif register_number=106 then
-        fastio_rdata <= std_logic_vector(character_set_address(23 downto 16));
+        fastio_rdata <= character_set_address(23 downto 16);
       elsif register_number=107 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(character_set_address(27 downto 24));
+        fastio_rdata(3 downto 0) <= character_set_address(27 downto 24);
       elsif register_number=108 then
-        fastio_rdata <= std_logic_vector(vicii_sprite_pointer_address(7 downto 0));
+        fastio_rdata <= vicii_sprite_pointer_address(7 downto 0);
       elsif register_number=109 then
-        fastio_rdata <= std_logic_vector(vicii_sprite_pointer_address(15 downto 8));
+        fastio_rdata <= vicii_sprite_pointer_address(15 downto 8);
       elsif register_number=110 then
-        fastio_rdata <= std_logic_vector(vicii_sprite_pointer_address(23 downto 16));
+        fastio_rdata <= vicii_sprite_pointer_address(23 downto 16);
       elsif register_number=111 then
         fastio_rdata(7 downto 4) <= x"0";
-        fastio_rdata(3 downto 0) <= std_logic_vector(vicii_sprite_pointer_address(27 downto 24));
+        fastio_rdata(3 downto 0) <= vicii_sprite_pointer_address(27 downto 24);
       elsif register_number=112 then
-        fastio_rdata <= palette_bank_fastio & palette_bank_chargen & palette_bank_sprites & "11";
+        fastio_rdata(7 downto 6) <= palette_bank_fastio;
+        fastio_rdata(5 downto 4) <= palette_bank_chargen;
+        fastio_rdata(3 downto 2) <= palette_bank_sprites;
+        fastio_rdata(1 downto 0) <= "11";
       elsif register_number=113 then
-        fastio_rdata <= std_logic_vector(x_chargen_start_minus17(7 downto 0));
+        fastio_rdata <= x_chargen_start_minus17(7 downto 0);
       elsif register_number=114 then
-        fastio_rdata <= "0000"&std_logic_vector(x_chargen_start_minus17(11 downto 8));
+        fastio_rdata <= "0000"&x_chargen_start_minus17(11 downto 8);
       elsif register_number=115 then
-        fastio_rdata <= std_logic_vector(debug_next_card_number(7 downto 0));
+        fastio_rdata <= debug_next_card_number(7 downto 0);
       elsif register_number=116 then
-        fastio_rdata <= std_logic_vector(debug_next_card_number(15 downto 8));
+        fastio_rdata <= debug_next_card_number(15 downto 8);
       elsif register_number=117 then
-        fastio_rdata <= std_logic_vector(debug_cycles_to_next_card(7 downto 0));
+        fastio_rdata <= debug_cycles_to_next_card(7 downto 0);
       elsif register_number=118 then
         fastio_rdata <= "000000" & debug_chargen_active & debug_chargen_active_soon;
       elsif register_number=124 then
-        fastio_rdata <= std_logic_vector(to_unsigned(debug_char_fetch_cycle,8));
+        fastio_rdata <= to_unsigned(debug_char_fetch_cycle,8);
       elsif register_number=125 then
         fastio_rdata <= debug_charaddress(7 downto 0);
       elsif register_number=126 then
@@ -844,16 +847,16 @@ begin
                                         -- C65 style palette registers
       elsif register_number>=256 and register_number<512 then
         -- red palette
-        palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
-        fastio_rdata <= palette_fastio_rdata(31 downto 24);
+        palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
+        fastio_rdata <= unsigned(palette_fastio_rdata(31 downto 24));
       elsif register_number>=512 and register_number<768 then
         -- green palette
-        palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
-        fastio_rdata <= palette_fastio_rdata(23 downto 16);
+        palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
+        fastio_rdata <= unsigned(palette_fastio_rdata(23 downto 16));
       elsif register_number>=768 and register_number<1024 then
         -- blue palette
-        palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
-        fastio_rdata <= palette_fastio_rdata(15 downto 8);
+        palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
+        fastio_rdata <= unsigned(palette_fastio_rdata(15 downto 8));
       else
         fastio_rdata <= "ZZZZZZZZ";
       end if;
@@ -882,11 +885,11 @@ begin
         and (fastio_addr(19) = '0' or fastio_addr(19) = '1') then
         if register_number>=0 and register_number<8 then
                                         -- compatibility sprite coordinates
-          sprite_x(to_integer(register_num(2 downto 0))) <= unsigned(fastio_wdata);
+          sprite_x(to_integer(register_num(2 downto 0))) <= fastio_wdata;
         elsif register_number<16 then
-          sprite_y(to_integer(register_num(2 downto 0))) <= unsigned(fastio_wdata);
+          sprite_y(to_integer(register_num(2 downto 0))) <= fastio_wdata;
         elsif register_number=16 then
-          vicii_sprite_xmsbs <= fastio_wdata;
+          vicii_sprite_xmsbs <= std_logic_vector(fastio_wdata);
         elsif register_number=17 then             -- $D011
           report "D011 WRITTEN" severity note;
           vicii_raster_compare(10) <= fastio_wdata(7);
@@ -910,7 +913,7 @@ begin
         elsif register_number=19 then          -- $D013 lightpen X (coarse rasterX)
         elsif register_number=20 then          -- $D014 lightpen Y (coarse rasterY)
         elsif register_number=21 then          -- $D015 compatibility sprite enable
-          vicii_sprite_enables <= fastio_wdata;
+          vicii_sprite_enables <= std_logic_vector(fastio_wdata);
         elsif register_number=22 then          -- $D016
           multicolour_mode <= fastio_wdata(4);
           thirtyeightcolumns <= not fastio_wdata(3);
@@ -929,7 +932,7 @@ begin
             border_x_right <= to_unsigned(1920-160-(9*5),12);
           end if;
         elsif register_number=23 then          -- $D017 compatibility sprite enable
-          vicii_sprite_y_expand <= fastio_wdata;
+          vicii_sprite_y_expand <= std_logic_vector(fastio_wdata);
         elsif register_number=24 then          -- $D018 compatibility RAM addresses
           -- Character set source address for user-generated character sets.
           character_set_address(13 downto 11) <= unsigned(fastio_wdata(3 downto 1));
@@ -966,15 +969,15 @@ begin
           mask_colissionspritebitmap <= fastio_wdata(1);
           mask_raster <= fastio_wdata(0);
         elsif register_number=27 then          -- $D01B sprite background priorty
-          vicii_sprite_priorty_bits <= fastio_wdata;
+          vicii_sprite_priorty_bits <= std_logic_vector(fastio_wdata);
         elsif register_number=28 then          -- $D01C sprite multicolour
-          vicii_sprite_multicolour_bits <= fastio_wdata;
+          vicii_sprite_multicolour_bits <= std_logic_vector(fastio_wdata);
         elsif register_number=29 then          -- $D01D compatibility sprite enable
-          vicii_sprite_x_expand <= fastio_wdata;
+          vicii_sprite_x_expand <= std_logic_vector(fastio_wdata);
         elsif register_number=30 then          -- $D01E sprite/sprite collissions
-          vicii_sprite_sprite_colissions <= fastio_wdata;
+          vicii_sprite_sprite_colissions <= std_logic_vector(fastio_wdata);
         elsif register_number=31 then          -- $D01F sprite/sprite collissions
-          vicii_sprite_bitmap_colissions <= fastio_wdata;
+          vicii_sprite_bitmap_colissions <= std_logic_vector(fastio_wdata);
         elsif register_number=32 then
           if (register_bank=x"D0" or register_bank=x"D2") then
             border_colour(3 downto 0) <= unsigned(fastio_wdata(3 downto 0));
@@ -1160,15 +1163,15 @@ begin
           null;
         elsif register_number>=256 and register_number<512 then
           -- red palette
-          palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
+          palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
           palette_we(3) <= '1';
         elsif register_number>=512 and register_number<768 then
           -- green palette
-          palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
+          palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
           palette_we(2) <= '1';
         elsif register_number>=768 and register_number<1024 then
           -- blue palette
-          palette_fastio_address <= palette_bank_fastio & std_logic_vector(register_number(7 downto 0));
+          palette_fastio_address <= std_logic_vector(palette_bank_fastio) & std_logic_vector(register_number(7 downto 0));
           palette_we(1) <= '1';
         else
           null;
@@ -1792,8 +1795,8 @@ begin
         debug_chargen_active <= chargen_active;
         debug_chargen_active_soon <= chargen_active_soon;
         debug_char_fetch_cycle <= char_fetch_cycle;
-        debug_charrow <= charrow;
-        debug_charaddress <= charaddress;
+        debug_charrow <= unsigned(charrow);
+        debug_charaddress <= unsigned(charaddress);
       end if;     
       if displayx=debug_x or displayy=debug_y then
         -- Draw cross-hairs at debug coordinates
@@ -1811,7 +1814,7 @@ begin
       --vga_buffer_blue <= palette(to_integer(pixel_colour)).blue(7 downto 4);
 
       -- XXX Doesn't select sprite palette bank when appropriate.
-      palette_address <= palette_bank_chargen & std_logic_vector(pixel_colour);
+      palette_address <= std_logic_vector(palette_bank_chargen) & std_logic_vector(pixel_colour);
       vga_buffer_red <= unsigned(palette_rdata(31 downto 28));
       vga_buffer_green <= unsigned(palette_rdata(23 downto 20));
       vga_buffer_blue <= unsigned(palette_rdata(15 downto 12));
