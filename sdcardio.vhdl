@@ -159,7 +159,7 @@ begin  -- behavioural
     procedure write_to_registers is
       variable register_num : unsigned(7 downto 0);
     begin  -- write_to_registers
-      report "writing to register" severity note;
+      report "writing to register $" & to_hstring(fastio_addr) severity note;
       if (fastio_addr(19 downto 5)&'0' = x"D108")
         or (fastio_addr(19 downto 5)&'0' = x"D308") then
         -- F011 FDC emulation registers
@@ -275,16 +275,21 @@ begin  -- behavioural
           when x"4" => sd_sector(31 downto 24) <= std_logic_vector(fastio_wdata);
           when others => null;
         end case;
-      elsif (sector_buffer_mapped='1') and
-        ((fastio_addr(19 downto 9)&'0' = x"D1E")
+      elsif ((fastio_addr(19 downto 9)&'0' = x"D1E")
          or (fastio_addr(19 downto 9)&'0' = x"D3E")) then
         -- Map sector buffer at $DE00-$DFFF when required
-        if fastio_read='0' and fastio_write='1' and sdio_busy='0' then
-          sector_buffer_address <= fastio_addr(8 downto 0);
-          sector_buffer_wdata <= fastio_wdata;
-          sector_buffer_we <= '1';
-          sector_buffer_oe <= '0';
-          sector_buffer_cs <= '1';
+        report "$DE00-$DFFF accessed" severity note;
+        if sector_buffer_mapped='1' then
+          report "sector buffer is mapped" severity note;
+          report "fastio_read=" & std_logic'image(fastio_read) & ", fastio_write=" & std_logic'image(fastio_write) & ", sdio_busy=" & std_logic'image(sdio_busy) severity note;
+          if fastio_read='0' and fastio_write='1' and sdio_busy='0' then
+            report "writing to sector buffer" severity note;
+            sector_buffer_address <= fastio_addr(8 downto 0);
+            sector_buffer_wdata <= fastio_wdata;
+            sector_buffer_we <= '1';
+            sector_buffer_oe <= '0';
+            sector_buffer_cs <= '1';
+          end if;
         end if;
       end if;
     end write_to_registers;
