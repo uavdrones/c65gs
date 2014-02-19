@@ -34,15 +34,17 @@ end sdcardio;
 
 architecture behavioural of sdcardio is
 
-  component ram8x512 IS
-  PORT (
-    clka : IN STD_LOGIC;
-    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(8 DOWNTO 0);
-    dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-    douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
-  );
-  END component;
+  component sectorbuffer is
+  port (Clk : in std_logic;
+        address : in std_logic_vector(8 downto 0);
+        we : in std_logic;
+        cs : in std_logic;
+        oe : in std_logic;
+        data_i : in std_logic_vector(7 downto 0);
+        data_o : out std_logic_vector(7 downto 0);
+        data_o_always : out std_logic_vector(7 downto 0)
+        );
+  end component;
 
   component sd_controller is
     port (
@@ -86,15 +88,12 @@ architecture behavioural of sdcardio is
   signal sdio_fsm_error : std_logic := '0';
 
   -- 512 byte sector buffer
-  --type sector_buffer_t is array (0 to 511) of unsigned(7 downto 0);
-  --signal sector_buffer : sector_buffer_t;
-  --attribute ram_style : string;
-  --attribute ram_style of sector_buffer : signal is "BLOCK";
   signal sector_buffer_mapped : std_logic := '0';
-  signal sector_buffer_we : std_logic_vector(0 downto 0);
+  signal sector_buffer_we : std_logic := '0';
+  signal sector_buffer_cs : std_logic := '0';
+  signal sector_buffer_oe : std_logic := '0';
   signal sector_buffer_address : unsigned(8 downto 0);
   signal sector_buffer_wdata : unsigned(7 downto 0);
-  signal sector_buffer_rdata : unsigned(7 downto 0);
   
   -- Counter for reading/writing sector
   signal sector_offset : unsigned(9 downto 0);
@@ -119,13 +118,16 @@ begin  -- behavioural
   -- SD card controller module.
   --**********************************************************************
 
-  sector0: ram8x512
+  sector0: sectorbuffer
     port map (
-      clka  => clock,
-      wea   => sector_buffer_we,
-      addra => std_logic_vector(sector_buffer_address),
-      dina => std_logic_vector(sector_buffer_wdata),
-      unsigned(douta) => sector_buffer_rdata);
+      clk  => clock,
+      we   => sector_buffer_we,
+      cs   => sector_buffer_cs,
+      oe   => sector_buffer_oe,
+      address => std_logic_vector(sector_buffer_address),
+      data_i => std_logic_vector(sector_buffer_wdata),
+      unsigned(data_o) => fastio_rdata,
+      data_o_always => sd_wdata);
   
   sd0: sd_controller 
     port map (
@@ -157,6 +159,7 @@ begin  -- behavioural
     procedure write_to_registers is
       variable register_num : unsigned(7 downto 0);
     begin  -- write_to_registers
+      report "writing to register" severity note;
       if (fastio_addr(19 downto 5)&'0' = x"D108")
         or (fastio_addr(19 downto 5)&'0' = x"D308") then
         -- F011 FDC emulation registers
@@ -259,6 +262,7 @@ begin  -- behavioural
               when x"81" => sector_buffer_mapped<='1';
                             sdio_error <= '0';
                             sdio_fsm_error <= '0';
+                            report "mapped sector buffer" severity note;
               when x"82" => sector_buffer_mapped<='0';
                             sdio_error <= '0';
                             sdio_fsm_error <= '0';
@@ -278,7 +282,9 @@ begin  -- behavioural
         if fastio_read='0' and fastio_write='1' and sdio_busy='0' then
           sector_buffer_address <= fastio_addr(8 downto 0);
           sector_buffer_wdata <= fastio_wdata;
-          sector_buffer_we(0) <= '1';
+          sector_buffer_we <= '1';
+          sector_buffer_oe <= '0';
+          sector_buffer_cs <= '0';
         end if;
       end if;
     end write_to_registers;
@@ -287,6 +293,7 @@ begin  -- behavioural
     procedure read_from_registers is
       variable register_num : unsigned(7 downto 0);
     begin  -- read_from_registers
+      report "reading from registers" severity note;
       if (fastio_addr(19 downto 5)&'0' = x"D108")
         or (fastio_addr(19 downto 5)&'0' = x"D308") then
         -- F011 FDC emulation registers
@@ -390,7 +397,8 @@ begin  -- behavioural
         case fastio_addr(3 downto 0) is
           when x"0" =>
             -- status / command register
-            -- error status in bit 6 so that V flag can be used for check      
+            -- error status in bit 6 so that V flag can be used for check
+            report "reading status register" severity note;
             fastio_rdata(7) <= '0';
             fastio_rdata(6) <= sdio_error;
             fastio_rdata(5) <= sdio_fsm_error;
@@ -433,17 +441,17 @@ begin  -- behavioural
           -- it is also possible that the ram type we are using will read out
           -- immediately.  Either way, it is fine.
           sector_buffer_address <= fastio_addr(8 downto 0);
-          sector_buffer_we(0) <= '0';
-          fastio_rdata <= sector_buffer_rdata;
+          sector_buffer_we <= '0';
+          sector_buffer_oe <= '1';
+          sector_buffer_cs <= '1';
         end if;
       end if;
     end read_from_registers;
     
   begin
 
+    report "clock=" & std_logic'image(clock) & ", write=" & std_logic'image(fastio_write) severity note;
     if rising_edge(clock) then      
-      sector_buffer_we(0) <= '0';
-      
       -- De-map sector buffer if VIC-IV maps colour RAM at $DC00
       sector_buffer_mapped <= sector_buffer_mapped and (not colourram_at_dc00);
       
@@ -479,7 +487,9 @@ begin  -- behavioural
             sd_doread <= '0';
             -- A byte is ready to read, so store it
             sector_buffer_address <= sector_offset(8 downto 0);
-            sector_buffer_we(0) <= '1';
+            sector_buffer_we <= '1';
+            sector_buffer_oe <= '0';
+            sector_buffer_cs <= '1';
             sector_buffer_wdata <= unsigned(sd_rdata);
             sd_state <= ReadingSectorAckByte;
             if skip=0 then
@@ -511,6 +521,7 @@ begin  -- behavioural
             sdio_busy <= '1';
             sd_state <= WritingSector;
             sector_offset <= (others => '0');
+            sector_buffer_address <= (others => '0');
 --            sd_wdata <= std_logic_vector(sector_buffer(0));
           else
             sd_dowrite <= '0';
@@ -519,6 +530,7 @@ begin  -- behavioural
           if data_ready='1' then
             sd_dowrite <= '0';
             -- Byte has been accepted, write next one
+            sector_buffer_address <= sector_offset(8 downto 0)+1;
 --            sd_wdata <= std_logic_vector(sector_buffer(to_integer(sector_offset+1)));
             sd_state <= WritingSectorAckByte;
             sector_offset <= sector_offset + 1;

@@ -29,8 +29,8 @@ simulate:	iomapper.vhdl container.vhd cpu_test.vhdl viciv.vhdl gs4510.vhdl debug
 testcia:	tb_cia.vhdl cia6526.vhdl debugtools.vhdl
 	ghdl -c tb_cia.vhdl cia6526.vhdl debugtools.vhdl -r tb_cia
 
-testiomapper:	tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcardio.vhdl sd.vhdl
-	ghdl -c tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcardio.vhdl sd.vhdl -r tb_iomapper
+testiomapper:	tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcardio.vhdl sd.vhdl sectorbuffer.vhdl
+	ghdl -c tb_iomapper.vhdl debugtools.vhdl iomapper.vhdl kickstart.vhdl cia6526.vhdl sdcardio.vhdl sd.vhdl sectorbuffer.vhdl -r tb_iomapper
 
 adctest:	adctest.a65
 	Ophis-2.0-standalone/ophis -o adctest adctest.a65

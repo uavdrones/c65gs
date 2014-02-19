@@ -97,19 +97,17 @@ begin
     -- purpose: tick clocks
     procedure tick is
     begin  -- tick
-      wait for 0 ns;
-
+      wait for 2.5 ns;
       pixelclock <= '1';
       cpuclock <= '1';
       wait for 2.5 ns;     
       pixelclock <= '0';
-      wait for 2.5 ns;
       
+      wait for 2.5 ns;      
       pixelclock <= '1';
       cpuclock <= '0';
       wait for 2.5 ns;     
       pixelclock <= '0';
-      wait for 2.5 ns;
     end tick;
   begin  -- process tb
     
@@ -117,10 +115,10 @@ begin
 
     reset <= '0';
     for i in 1 to 10 loop
+      wait for 2.5 ns;      
       pixelclock <= '1';
       wait for 2.5 ns;
       pixelclock <= '0';
-      wait for 2.5 ns;      
     end loop;  -- i
     reset <= '1';
     report "reset released" severity note;
@@ -131,7 +129,7 @@ begin
     tick;
     r <= '0'; w <= '1'; address <= x"D3C01"; data_i <= x"55";
     tick;
-    r <= '1'; w <= '0'; address <= x"D3C01"; data_i <= x"55";
+    r <= '1'; w <= '0'; address <= x"D3C01";
     tick;
     report "$DC00=$" & to_hstring(data_o) severity note;
     r <= '1'; w <= '0'; address <= x"D3C1F";
@@ -141,6 +139,16 @@ begin
     tick;
     report "kickstart_read=$" & to_hstring(kickstart_o) severity note;
 
+    -- Map sector buffer
+    r <= '0'; w <= '1'; address <= x"D3680"; data_i <= x"81";
+    tick;
+    r <= '1'; w <= '0'; address <= x"D3680";
+    tick;
+    report "SD controller status = $" & to_hstring(data_o) severity note;
+
+    r <= '1'; w <= '0'; address <= x"D3E00";
+    tick;
+    report "Frist byte of sector buffer = $" & to_hstring(data_o) severity note;
     
     assert false report "End of simulation" severity failure;
   end process;
