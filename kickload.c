@@ -92,6 +92,7 @@ int main(int argc,char **argv)
   } else {
     unsigned long long load_addr = 0xfffe000;
     printf("Load address is $%08llx\n",load_addr);
+    slow_write(fd,"\n",1);
     usleep(10000);
     unsigned char buf[1024];
     int b=fread(buf,1,1024,f);
