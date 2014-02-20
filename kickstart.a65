@@ -109,9 +109,13 @@ tryreadmbr:
 		jsr readmbr
 		bcs gotmbr
 
+		inc $d020
 		jmp tryreadmbr
 		
 gotmbr:
+		; first time read can wrong for some reason, so re-read		
+		jsr readmbr
+
 		ldx #<msg_sdcardfound
 		ldy #>msg_sdcardfound
 		jsr printmessage
@@ -372,7 +376,6 @@ l17c:		sta $0428,x
 		cpx #$0b
 		bne l17b
 		; this is the entry
-		inc $d020
 		jmp foundromfile
 
 notthisentry:   ; see if there are more entries in this page		
@@ -416,8 +419,7 @@ trynextcluster:
 foundromfile:
 		; MILESTONE: Have file system properties.
 		lda #$3e           ; ">" character
-		sta $07c3          ; $0400+(24*40)+3
-
+		sta $07c3          ; $0400+(24*40)+3		
 
 		; temporary infinite loop to catch us
 infinity:	inc $07e7          ; $0400+(24*40)+39
