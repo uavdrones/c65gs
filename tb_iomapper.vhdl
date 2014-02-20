@@ -17,12 +17,12 @@ architecture behavior of tb_iomapper is
           reset : in std_logic;
           irq : out std_logic;
           nmi : out std_logic;
-          address : in std_logic_vector(19 downto 0);
+          address : in unsigned(19 downto 0);
           r : in std_logic;
           w : in std_logic;
-          data_i : in std_logic_vector(7 downto 0);
-          data_o : out std_logic_vector(7 downto 0);
-          kickstart_o : out std_logic_vector(7 downto 0);
+          data_i : in unsigned(7 downto 0);
+          data_o : out unsigned(7 downto 0);
+          kickstart_o : out unsigned(7 downto 0);
 
           ps2data : in std_logic;
           ps2clock : in std_logic;
@@ -47,12 +47,12 @@ architecture behavior of tb_iomapper is
   signal reset : std_logic := '0';
   signal irq : std_logic;
   signal nmi : std_logic;
-  signal address : std_logic_vector(19 downto 0) := (others => '0');
+  signal address : unsigned(19 downto 0) := (others => '0');
   signal r : std_logic := '0';
   signal w : std_logic := '0';
-  signal data_i : std_logic_vector(7 downto 0) := x"00";
-  signal data_o : std_logic_vector(7 downto 0);
-  signal kickstart_o : std_logic_vector(7 downto 0);
+  signal data_i : unsigned(7 downto 0) := x"00";
+  signal data_o : unsigned(7 downto 0);
+  signal kickstart_o : unsigned(7 downto 0);
   
   signal ps2data : std_logic := '1';
   signal ps2clock : std_logic := '1';
